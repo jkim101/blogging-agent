@@ -1,0 +1,15 @@
+<div class="progress-bar">
+    {% set steps = ["research_planner", "outline_review", "writer", "fact_checker", "critic", "translator", "editor", "seo_optimizer", "publish_review", "publish"] %}
+    {% set current = status.current_step %}
+    {% set passed = false %}
+    {% for step in steps %}
+        {% if step == current %}
+            <span class="step step-active">{{ step | replace("_", " ") | title }}</span>
+            {% set passed = true %}
+        {% elif not passed %}
+            <span class="step step-done">{{ step | replace("_", " ") | title }}</span>
+        {% else %}
+            <span class="step step-pending">{{ step | replace("_", " ") | title }}</span>
+        {% endif %}
+    {% endfor %}
+</div>

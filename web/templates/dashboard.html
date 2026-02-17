@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Blogging Agent{% endblock %}
+{% block content %}
+<h1>Pipeline Dashboard</h1>
+
+{% if pipelines %}
+<table class="pipeline-list">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Step</th>
+            <th>Status</th>
+            <th>Rewrites</th>
+            <th>Critic Score</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for p in pipelines %}
+        <tr>
+            <td><code>{{ p.thread_id }}</code></td>
+            <td>{{ p.current_step }}</td>
+            <td>
+                {% if p.is_interrupted %}
+                    <span class="badge badge-waiting">Waiting for review</span>
+                {% elif p.has_final_ko %}
+                    <span class="badge badge-done">Completed</span>
+                {% else %}
+                    <span class="badge badge-running">Running</span>
+                {% endif %}
+            </td>
+            <td>{{ p.rewrite_count }}</td>
+            <td>{{ p.critic_score or "—" }}</td>
+            <td><a href="/pipeline/{{ p.thread_id }}">View</a></td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p>No pipelines yet. <a href="/new">Start a new pipeline</a>.</p>
+{% endif %}
+{% endblock %}

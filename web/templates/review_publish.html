@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block title %}Review & Publish — Blogging Agent{% endblock %}
+{% block content %}
+<h1>Review & Publish</h1>
+
+<!-- Summary -->
+<div class="summary">
+    <div class="summary-item">
+        <strong>Critic Score:</strong>
+        {{ state.critic_feedback.score if state.critic_feedback else "N/A" }} / 10
+    </div>
+    <div class="summary-item">
+        <strong>Fact Check Accuracy:</strong>
+        {{ "%.0f%%"|format(state.fact_check.overall_accuracy * 100) if state.fact_check else "N/A" }}
+    </div>
+    <div class="summary-item">
+        <strong>Rewrites:</strong> {{ state.rewrite_count | default(0) }}
+    </div>
+</div>
+
+<!-- Expandable details -->
+{% if state.critic_feedback %}
+<details>
+    <summary>Critic Feedback</summary>
+    <p><strong>Verdict:</strong> {{ state.critic_feedback.verdict.value | upper }}</p>
+    <p><strong>Score:</strong> {{ state.critic_feedback.score }} / 10</p>
+    <h4>Strengths</h4>
+    <ul>
+        {% for s in state.critic_feedback.strengths %}
+        <li>{{ s }}</li>
+        {% endfor %}
+    </ul>
+    <h4>Weaknesses</h4>
+    <ul>
+        {% for w in state.critic_feedback.weaknesses %}
+        <li>{{ w }}</li>
+        {% endfor %}
+    </ul>
+    {% if state.critic_feedback.specific_feedback %}
+    <p><strong>Feedback:</strong> {{ state.critic_feedback.specific_feedback }}</p>
+    {% endif %}
+</details>
+{% endif %}
+
+{% if state.fact_check %}
+<details>
+    <summary>Fact Check ({{ state.fact_check.issues_found | length }} issues)</summary>
+    <p>Claims checked: {{ state.fact_check.claims_checked }}</p>
+    {% if state.fact_check.issues_found %}
+    <table>
+        <thead>
+            <tr><th>Severity</th><th>Claim</th><th>Issue</th><th>Suggestion</th></tr>
+        </thead>
+        <tbody>
+            {% for issue in state.fact_check.issues_found %}
+            <tr>
+                <td><span class="badge badge-{{ issue.severity.value }}">{{ issue.severity.value }}</span></td>
+                <td>{{ issue.claim }}</td>
+                <td>{{ issue.issue }}</td>
+                <td>{{ issue.suggestion }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>No issues found.</p>
+    {% endif %}
+</details>
+{% endif %}
+
+{% if state.seo_metadata_ko or state.seo_metadata_en %}
+<details>
+    <summary>SEO Metadata</summary>
+    {% if state.seo_metadata_ko %}
+    <h4>Korean</h4>
+    <p><strong>Title:</strong> {{ state.seo_metadata_ko.optimized_title }}</p>
+    <p><strong>Description:</strong> {{ state.seo_metadata_ko.meta_description }}</p>
+    <p><strong>Keyword:</strong> {{ state.seo_metadata_ko.primary_keyword }}</p>
+    <p><strong>Slug:</strong> {{ state.seo_metadata_ko.suggested_slug }}</p>
+    {% endif %}
+    {% if state.seo_metadata_en %}
+    <h4>English</h4>
+    <p><strong>Title:</strong> {{ state.seo_metadata_en.optimized_title }}</p>
+    <p><strong>Description:</strong> {{ state.seo_metadata_en.meta_description }}</p>
+    <p><strong>Keyword:</strong> {{ state.seo_metadata_en.primary_keyword }}</p>
+    <p><strong>Slug:</strong> {{ state.seo_metadata_en.suggested_slug }}</p>
+    {% endif %}
+</details>
+{% endif %}
+
+<!-- Post preview with tabs -->
+<div class="post-preview">
+    <div class="tabs">
+        <button class="tab active" onclick="showTab('ko')">Korean</button>
+        <button class="tab" onclick="showTab('en')">English</button>
+    </div>
+    <div id="tab-ko" class="tab-content active">
+        <pre>{{ state.final_post_ko or state.edited_draft_ko or "No Korean post available" }}</pre>
+    </div>
+    <div id="tab-en" class="tab-content" style="display:none">
+        <pre>{{ state.final_post_en or state.edited_draft_en or "No English post available" }}</pre>
+    </div>
+</div>
+
+<!-- Publish form -->
+<form method="post" action="/pipeline/{{ pipeline_id }}/publish-decision">
+    <div class="publish-options">
+        <h3>Publish to GitHub Pages</h3>
+        <label>
+            <input type="checkbox" name="publish_ko" value="1" checked>
+            Publish Korean to GitHub Pages
+        </label>
+        <label>
+            <input type="checkbox" name="publish_en" value="1" checked>
+            Publish English to GitHub Pages
+        </label>
+    </div>
+    <div class="actions">
+        <button name="decision" value="approve">Publish</button>
+        <button name="decision" value="reject">Reject</button>
+    </div>
+</form>
+
+<script>
+function showTab(lang) {
+    document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+    document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+    document.getElementById('tab-' + lang).style.display = 'block';
+    event.target.classList.add('active');
+}
+</script>
+{% endblock %}

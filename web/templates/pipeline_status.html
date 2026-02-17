@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Pipeline {{ pipeline_id }} — Blogging Agent{% endblock %}
+{% block content %}
+<h1>Pipeline Status</h1>
+
+<div class="pipeline-info">
+    <p><strong>ID:</strong> <code>{{ pipeline_id }}</code></p>
+    <p><strong>Current Step:</strong> {{ status.current_step }}</p>
+    <p><strong>Rewrites:</strong> {{ status.rewrite_count }}</p>
+    {% if status.critic_score %}
+    <p><strong>Critic Score:</strong> {{ status.critic_score }} / 10</p>
+    {% endif %}
+</div>
+
+<!-- HTMX polling for live updates -->
+<div id="status-bar"
+     hx-get="/api/pipeline/{{ pipeline_id }}/status"
+     hx-trigger="every 2s"
+     hx-swap="innerHTML">
+    {% include "fragments/status_bar.html" %}
+</div>
+
+{% if status.has_final_ko %}
+<h2>Results</h2>
+<div class="post-preview">
+    <div class="tabs">
+        <button class="tab active" onclick="showTab('ko')">Korean</button>
+        <button class="tab" onclick="showTab('en')">English</button>
+    </div>
+    <div id="tab-ko" class="tab-content active">
+        <pre>{{ state.final_post_ko or state.edited_draft_ko or state.draft_ko or "" }}</pre>
+    </div>
+    <div id="tab-en" class="tab-content" style="display:none">
+        <pre>{{ state.final_post_en or state.edited_draft_en or state.draft_en or "" }}</pre>
+    </div>
+</div>
+<script>
+function showTab(lang) {
+    document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+    document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+    document.getElementById('tab-' + lang).style.display = 'block';
+    event.target.classList.add('active');
+}
+</script>
+{% endif %}
+
+<p><a href="/dashboard">Back to Dashboard</a></p>
+{% endblock %}

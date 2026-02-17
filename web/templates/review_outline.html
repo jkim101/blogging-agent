@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Review Outline — Blogging Agent{% endblock %}
+{% block content %}
+<h1>Review Outline</h1>
+
+<div class="outline-review">
+    <h2>{{ outline.topic }}</h2>
+    <p><strong>Angle:</strong> {{ outline.angle }}</p>
+    <p><strong>Target Audience:</strong> {{ outline.target_audience }}</p>
+    <p><strong>Estimated Word Count:</strong> {{ outline.estimated_word_count }}</p>
+
+    <h3>Key Points</h3>
+    <ul>
+        {% for point in outline.key_points %}
+        <li>{{ point }}</li>
+        {% endfor %}
+    </ul>
+
+    <h3>Structure</h3>
+    {% for section in outline.structure %}
+    <div class="outline-section">
+        <h4>{{ section.heading }}</h4>
+        <ul>
+            {% for kp in section.key_points %}
+            <li>{{ kp }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endfor %}
+</div>
+
+{% if research_summary %}
+<details>
+    <summary>Research Summary</summary>
+    <pre>{{ research_summary }}</pre>
+</details>
+{% endif %}
+
+<form method="post" action="/pipeline/{{ pipeline_id }}/outline-decision">
+    <label for="notes">Notes for the Writer (optional)</label>
+    <textarea id="notes" name="notes" rows="4" placeholder="Optional notes for the Writer..."></textarea>
+    <div class="actions">
+        <button name="decision" value="approve">Approve</button>
+        <button name="decision" value="edit">Approve with Notes</button>
+        <button name="decision" value="reject">Reject</button>
+    </div>
+</form>
+{% endblock %}

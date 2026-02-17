@@ -1,0 +1,38 @@
+# Blog Style Guide
+# Used by Editor agent to ensure consistent tone and formatting
+
+general:
+  tone: "informative yet conversational"
+  formality: "semi-formal"
+  perspective: "first-person plural (we) or second-person (you)"
+
+formatting:
+  paragraph_max_sentences: 4
+  use_subheadings: true
+  subheading_style: "## for main sections, ### for subsections"
+  use_bullet_lists: true
+  code_blocks: "fenced with language identifier"
+
+korean:
+  sentence_ending: "~합니다 (formal polite)"
+  avoid:
+    - "excessive English loanwords when Korean equivalents exist"
+    - "overly academic tone"
+  preferences:
+    - "clear and direct explanations"
+    - "practical examples over abstract theory"
+
+english:
+  voice: "active voice preferred"
+  avoid:
+    - "jargon without explanation"
+    - "overly long sentences"
+  preferences:
+    - "concrete examples"
+    - "scannable structure with clear headers"
+
+seo:
+  title_max_length: 60
+  meta_description_max_length: 160
+  keyword_density: "1-2%"
+  include_internal_links: false
