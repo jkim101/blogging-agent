@@ -8,6 +8,7 @@ See 설계서 §5 for HITL design, §10 for authentication.
 from __future__ import annotations
 
 import logging
+import os
 import shutil
 from pathlib import Path
 
@@ -19,7 +20,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from config.settings import DASHBOARD_PASSWORD, STYLE_GUIDE_PATH
 from core.runner import PipelineRunner
-from core.state import HumanDecision, PublishTarget, SourceContent
+from core.state import BlogConfig, HumanDecision, PublishTarget, SourceContent
 from parsers.url_parser import parse_url
 from parsers.pdf_parser import parse_pdf
 from parsers.youtube_parser import parse_youtube
@@ -27,7 +28,7 @@ from parsers.youtube_parser import parse_youtube
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Blogging Agent Dashboard")
-app.add_middleware(SessionMiddleware, secret_key="blogging-agent-secret-key")
+app.add_middleware(SessionMiddleware, secret_key=os.getenv("SESSION_SECRET", "blogging-agent-secret-key"))
 
 TEMPLATES_DIR = Path(__file__).parent / "templates"
 STATIC_DIR = Path(__file__).parent / "static"
@@ -96,7 +97,16 @@ async def dashboard(request: Request):
             status = runner.get_status(thread_id)
             pipelines.append(status)
         except Exception:
-            pass
+            # Show errored pipelines so they can be deleted
+            pipelines.append({
+                "thread_id": thread_id,
+                "current_step": "error",
+                "is_interrupted": False,
+                "rewrite_count": 0,
+                "critic_score": None,
+                "has_final_ko": False,
+                "has_final_en": False,
+            })
 
     return templates.TemplateResponse(
         "dashboard.html", {"request": request, "pipelines": pipelines}
@@ -116,6 +126,16 @@ async def start_pipeline(
     urls: list[str] = Form(default=[]),
     youtube_urls: list[str] = Form(default=[]),
     pdfs: list[UploadFile] = File(default=[]),
+    word_count: int = Form(default=1500),
+    tone: str = Form(default="professional"),
+    writing_style: str = Form(default="analysis"),
+    target_audience: str = Form(default=""),
+    output_language: str = Form(default="both"),
+    primary_keyword: str = Form(default=""),
+    categories: str = Form(default=""),
+    include_code_examples: str = Form(default=""),
+    include_tldr: str = Form(default=""),
+    custom_instructions: str = Form(default=""),
 ):
     if not is_authenticated(request):
         return RedirectResponse("/login", status_code=302)
@@ -156,8 +176,21 @@ async def start_pipeline(
             {"request": request, "error": "No valid sources provided."},
         )
 
+    blog_config = BlogConfig(
+        word_count=word_count,
+        tone=tone,
+        writing_style=writing_style,
+        target_audience=target_audience.strip(),
+        output_language=output_language,
+        primary_keyword=primary_keyword.strip(),
+        categories=[c.strip() for c in categories.split(",") if c.strip()],
+        include_code_examples=bool(include_code_examples),
+        include_tldr=bool(include_tldr),
+        custom_instructions=custom_instructions.strip(),
+    )
+
     runner = get_runner()
-    thread_id = runner.start(sources)
+    thread_id = runner.start(sources, blog_config=blog_config)
 
     # Track pipeline in session
     if "pipelines" not in request.session:
@@ -167,14 +200,42 @@ async def start_pipeline(
     return RedirectResponse(f"/pipeline/{thread_id}", status_code=302)
 
 
+@app.post("/pipeline/{thread_id}/delete")
+async def delete_pipeline(request: Request, thread_id: str):
+    """Remove a pipeline from the dashboard session."""
+    if not is_authenticated(request):
+        return RedirectResponse("/login", status_code=302)
+
+    pipelines = request.session.get("pipelines", [])
+    if thread_id in pipelines:
+        pipelines.remove(thread_id)
+        request.session["pipelines"] = pipelines
+
+    return RedirectResponse("/dashboard", status_code=302)
+
+
 @app.get("/pipeline/{thread_id}", response_class=HTMLResponse)
 async def pipeline_detail(request: Request, thread_id: str):
     if not is_authenticated(request):
         return RedirectResponse("/login", status_code=302)
 
     runner = get_runner()
-    status = runner.get_status(thread_id)
-    state = runner.get_state(thread_id)
+    try:
+        status = runner.get_status(thread_id)
+        state = runner.get_state(thread_id)
+    except Exception as e:
+        logger.error("Failed to load pipeline %s: %s", thread_id, e)
+        return templates.TemplateResponse(
+            "pipeline_status.html",
+            {
+                "request": request,
+                "pipeline_id": thread_id,
+                "status": {"current_step": "error", "is_interrupted": False, "rewrite_count": 0,
+                           "critic_score": None, "has_final_ko": False, "has_final_en": False},
+                "state": {},
+                "error": f"Failed to load pipeline: {e}",
+            },
+        )
 
     # Route to appropriate view based on pipeline state
     if status["is_interrupted"]:

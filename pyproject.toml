@@ -1,6 +1,6 @@
 [build-system]
 requires = ["hatchling"]
-build-backend = "hatchling.backends"
+build-backend = "hatchling.build"
 
 [project]
 name = "auto-blog-agent"
@@ -10,6 +10,7 @@ requires-python = ">=3.11"
 dependencies = [
     "anthropic>=0.42.0",
     "langgraph>=0.2.0",
+    "langgraph-checkpoint-sqlite>=2.0.0",
     "fastapi>=0.115.0",
     "uvicorn>=0.32.0",
     "jinja2>=3.1.0",
