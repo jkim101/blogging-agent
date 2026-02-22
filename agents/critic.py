@@ -66,7 +66,10 @@ class CriticAgent(BaseAgent):
             max_tokens=4096,
         )
 
-        feedback = self.parse_tool_response(message, CriticFeedback)
+        feedback = self.parse_tool_response(
+            message, CriticFeedback,
+            _system_prompt=system_prompt, _user_message=user_message, _tools=TOOLS,
+        )
 
         return {
             "critic_feedback": feedback,

@@ -26,27 +26,22 @@ def parse_url(url: str) -> SourceContent:
     if downloaded is None:
         raise ValueError(f"Failed to fetch URL: {url}")
 
-    text = trafilatura.extract(
-        downloaded,
-        include_comments=False,
-        include_tables=True,
-        favor_recall=True,
-    )
-    if not text:
-        raise ValueError(f"Failed to extract content from URL: {url}")
-
-    # Extract metadata via JSON output
+    # Single extraction call — JSON output includes both text and metadata
     meta_json = trafilatura.extract(
         downloaded,
         output_format="json",
         include_comments=False,
+        include_tables=True,
+        favor_recall=True,
     )
 
+    text = ""
     meta_dict: dict = {}
     title = ""
     if meta_json:
         try:
             parsed = json.loads(meta_json)
+            text = parsed.get("text", "")
             title = parsed.get("title", "")
             meta_dict = {
                 k: v for k, v in parsed.items()
@@ -55,6 +50,9 @@ def parse_url(url: str) -> SourceContent:
             }
         except json.JSONDecodeError:
             logger.warning("Failed to parse metadata JSON for URL: %s", url)
+
+    if not text:
+        raise ValueError(f"Failed to extract content from URL: {url}")
 
     return SourceContent(
         source_type=SourceType.URL,

@@ -46,7 +46,10 @@ class FactCheckerAgent(BaseAgent):
             max_tokens=4096,
         )
 
-        fact_check = self.parse_tool_response(message, FactCheckResult)
+        fact_check = self.parse_tool_response(
+            message, FactCheckResult,
+            _system_prompt=SYSTEM_PROMPT, _user_message=user_message, _tools=TOOLS,
+        )
 
         result: dict[str, Any] = {
             "fact_check": fact_check,

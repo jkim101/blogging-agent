@@ -11,7 +11,7 @@ import logging
 from typing import Any
 
 from agents.base_agent import BaseAgent
-from core.state import Outline
+from core.state import BlogConfig, Outline
 from prompts.research_planner import SYSTEM_PROMPT, TOOLS
 
 logger = logging.getLogger(__name__)
@@ -23,6 +23,13 @@ class ResearchPlannerAgent(BaseAgent):
     def run(self, state: dict[str, Any]) -> dict[str, Any]:
         """Analyze sources and produce research_summary + outline."""
         sources = state["sources"]
+        config = state.get("blog_config") or BlogConfig()
+
+        config_section = config.format_as_prompt_section()
+        if not config.target_audience:
+            config_section += "\n- Target audience: Determine the best audience from the sources"
+
+        system_prompt = SYSTEM_PROMPT.format(config_section=config_section)
 
         # Build user message with all source content
         source_texts = []
@@ -36,13 +43,16 @@ class ResearchPlannerAgent(BaseAgent):
         user_message = "\n\n".join(source_texts)
 
         message = self.call_llm(
-            system_prompt=SYSTEM_PROMPT,
+            system_prompt=system_prompt,
             user_message=user_message,
             tools=TOOLS,
             max_tokens=4096,
         )
 
-        outline = self.parse_tool_response(message, Outline)
+        outline = self.parse_tool_response(
+            message, Outline,
+            _system_prompt=system_prompt, _user_message=user_message, _tools=TOOLS,
+        )
 
         # Extract research summary from text blocks (LLM may include analysis before tool call)
         research_summary = self.get_text_response(message)

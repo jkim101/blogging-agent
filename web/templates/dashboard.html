@@ -19,19 +19,35 @@
         {% for p in pipelines %}
         <tr>
             <td><code>{{ p.thread_id }}</code></td>
-            <td>{{ p.current_step }}</td>
+            <td>{{ p.next_node if p.is_stuck else p.current_step }}</td>
             <td>
-                {% if p.is_interrupted %}
-                    <span class="badge badge-waiting">Waiting for review</span>
-                {% elif p.has_final_ko %}
+                {% if p.current_step == "error" %}
+                    <span class="badge badge-high">Error</span>
+                {% elif p.next_node == "outline_review" %}
+                    <span class="badge badge-waiting">Review outline</span>
+                {% elif p.next_node == "publish_review" %}
+                    <span class="badge badge-waiting">Review & publish</span>
+                {% elif p.has_final_ko or p.has_final_en %}
                     <span class="badge badge-done">Completed</span>
+                {% elif p.is_stuck %}
+                    <span class="badge badge-high">Stuck ({{ p.next_node }})</span>
                 {% else %}
                     <span class="badge badge-running">Running</span>
                 {% endif %}
             </td>
             <td>{{ p.rewrite_count }}</td>
             <td>{{ p.critic_score or "—" }}</td>
-            <td><a href="/pipeline/{{ p.thread_id }}">View</a></td>
+            <td>
+                <a href="/pipeline/{{ p.thread_id }}">View</a>
+                {% if p.is_stuck %}
+                <form method="post" action="/pipeline/{{ p.thread_id }}/retry" style="display:inline; margin-left: 8px;">
+                    <button type="submit" class="btn-retry">Retry</button>
+                </form>
+                {% endif %}
+                <form method="post" action="/pipeline/{{ p.thread_id }}/delete" style="display:inline; margin-left: 8px;">
+                    <button type="submit" class="btn-delete" onclick="return confirm('Delete this pipeline?')">Delete</button>
+                </form>
+            </td>
         </tr>
         {% endfor %}
     </tbody>

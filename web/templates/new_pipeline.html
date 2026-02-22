@@ -38,6 +38,79 @@
         <button type="button" onclick="addFileInput('pdf-inputs')">+ Add PDF</button>
     </fieldset>
 
+    <fieldset>
+        <legend>Blog Configuration</legend>
+
+        <div class="form-group">
+            <label for="word_count">Word Count</label>
+            <input type="number" id="word_count" name="word_count" value="1500" min="300" max="10000">
+        </div>
+
+        <div class="form-group">
+            <label for="tone">Tone</label>
+            <select id="tone" name="tone">
+                <option value="professional" selected>Professional</option>
+                <option value="casual">Casual</option>
+                <option value="academic">Academic</option>
+                <option value="conversational">Conversational</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="writing_style">Writing Style</label>
+            <select id="writing_style" name="writing_style">
+                <option value="analysis" selected>Analysis</option>
+                <option value="tutorial">Tutorial</option>
+                <option value="opinion">Opinion</option>
+                <option value="summary">Summary</option>
+                <option value="listicle">Listicle</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="output_language">Output Language</label>
+            <select id="output_language" name="output_language">
+                <option value="both" selected>Both (Korean + English)</option>
+                <option value="ko-only">Korean Only</option>
+                <option value="en-only">English Only</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="target_audience">Target Audience</label>
+            <input type="text" id="target_audience" name="target_audience" placeholder="Leave blank for auto-detection">
+        </div>
+
+        <div class="form-group">
+            <label for="primary_keyword">Primary SEO Keyword</label>
+            <input type="text" id="primary_keyword" name="primary_keyword" placeholder="Leave blank for auto-detection">
+        </div>
+
+        <div class="form-group">
+            <label for="categories">Categories</label>
+            <input type="text" id="categories" name="categories" placeholder="Comma-separated (e.g. AI, Programming)">
+        </div>
+
+        <div class="form-group">
+            <label>
+                <input type="checkbox" name="include_code_examples" value="on">
+                Include code examples
+            </label>
+        </div>
+
+        <div class="form-group">
+            <label>
+                <input type="checkbox" name="include_tldr" value="on">
+                Include TL;DR summary
+            </label>
+        </div>
+
+        <div class="form-group">
+            <label for="custom_instructions">Custom Instructions</label>
+            <textarea id="custom_instructions" name="custom_instructions" rows="3" placeholder="Any additional instructions for the writing agents..."></textarea>
+        </div>
+    </fieldset>
+
     <button type="submit" class="btn-primary">Start Pipeline</button>
 </form>
 

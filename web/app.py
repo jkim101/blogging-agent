@@ -7,6 +7,7 @@ See 설계서 §5 for HITL design, §10 for authentication.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 import shutil
@@ -96,7 +97,8 @@ async def dashboard(request: Request):
         try:
             status = runner.get_status(thread_id)
             pipelines.append(status)
-        except Exception:
+        except Exception as e:
+            logger.error("Failed to load pipeline %s: %s", thread_id, e)
             # Show errored pipelines so they can be deleted
             pipelines.append({
                 "thread_id": thread_id,
@@ -146,7 +148,7 @@ async def start_pipeline(
     for url in urls:
         if url.strip():
             try:
-                sources.append(parse_url(url.strip()))
+                sources.append(await asyncio.to_thread(parse_url, url.strip()))
             except Exception as e:
                 logger.warning("Failed to parse URL %s: %s", url, e)
 
@@ -154,7 +156,7 @@ async def start_pipeline(
     for yt_url in youtube_urls:
         if yt_url.strip():
             try:
-                sources.append(parse_youtube(yt_url.strip()))
+                sources.append(await asyncio.to_thread(parse_youtube, yt_url.strip()))
             except Exception as e:
                 logger.warning("Failed to parse YouTube URL %s: %s", yt_url, e)
 
@@ -162,11 +164,11 @@ async def start_pipeline(
     UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     for pdf_file in pdfs:
         if pdf_file.filename and pdf_file.size and pdf_file.size > 0:
-            save_path = UPLOAD_DIR / pdf_file.filename
+            save_path = UPLOAD_DIR / Path(pdf_file.filename).name
             with open(save_path, "wb") as f:
                 shutil.copyfileobj(pdf_file.file, f)
             try:
-                sources.append(parse_pdf(save_path))
+                sources.append(await asyncio.to_thread(parse_pdf, save_path))
             except Exception as e:
                 logger.warning("Failed to parse PDF %s: %s", pdf_file.filename, e)
 
@@ -190,12 +192,27 @@ async def start_pipeline(
     )
 
     runner = get_runner()
-    thread_id = runner.start(sources, blog_config=blog_config)
+    thread_id = await asyncio.to_thread(runner.start, sources, blog_config=blog_config)
 
-    # Track pipeline in session
-    if "pipelines" not in request.session:
-        request.session["pipelines"] = []
-    request.session["pipelines"].append(thread_id)
+    # Track pipeline in session (must reassign to trigger SessionMiddleware save)
+    pipelines = list(request.session.get("pipelines", []))
+    pipelines.append(thread_id)
+    request.session["pipelines"] = pipelines
+
+    return RedirectResponse(f"/pipeline/{thread_id}", status_code=302)
+
+
+@app.post("/pipeline/{thread_id}/retry")
+async def retry_pipeline(request: Request, thread_id: str):
+    """Retry a stuck pipeline from its last checkpoint."""
+    if not is_authenticated(request):
+        return RedirectResponse("/login", status_code=302)
+
+    runner = get_runner()
+    try:
+        await asyncio.to_thread(runner.retry, thread_id)
+    except Exception as e:
+        logger.error("Retry failed for pipeline %s: %s", thread_id, e)
 
     return RedirectResponse(f"/pipeline/{thread_id}", status_code=302)
 
@@ -281,7 +298,7 @@ async def outline_decision(
         "outline_decision": HumanDecision(decision),
         "outline_human_notes": notes,
     }
-    runner.resume(thread_id, human_input)
+    await asyncio.to_thread(runner.resume, thread_id, human_input)
 
     return RedirectResponse(f"/pipeline/{thread_id}", status_code=302)
 
@@ -306,7 +323,7 @@ async def publish_decision(
         "publish_decision": HumanDecision(decision),
         "publish_targets": publish_targets,
     }
-    runner.resume(thread_id, human_input)
+    await asyncio.to_thread(runner.resume, thread_id, human_input)
 
     return RedirectResponse(f"/pipeline/{thread_id}", status_code=302)
 

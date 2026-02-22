@@ -19,10 +19,13 @@ Output requirements:
 - Identify a clear, unique angle/perspective
 - Structure should be logical and reader-friendly
 - Key points should be backed by source material
+- Each section should have 2-3 key points with supporting detail
+- Estimate ~200 words per section to reach the target word count
+- Include 1 opening hook and 1 concluding insight in the outline structure
 - The outline is language-neutral (shared by Korean and English versions)
 
 Use the `create_outline` tool to return your structured output.
-"""
+{config_section}"""
 
 TOOLS = [
     BaseAgent.build_tool_schema(

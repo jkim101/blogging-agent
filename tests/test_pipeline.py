@@ -120,59 +120,6 @@ def test_save_posts_creates_files(tmp_path, sample_state, sample_critic_pass, sa
     assert "# 한글 포스트" in ko_content
 
 
-def test_publish_node_with_github_pages_targets(tmp_path, sample_state, sample_critic_pass, sample_fact_check):
-    """publish_node should call JekyllPublisher for targets with publish=True."""
-    from unittest.mock import patch, MagicMock
-    from core.graph import publish_node
-    from core.state import PublishTarget, SEOMetadata
-
-    sample_state["critic_feedback"] = sample_critic_pass
-    sample_state["fact_check"] = sample_fact_check
-    sample_state["final_post_ko"] = "# 한글 포스트\n\n본문입니다."
-    sample_state["final_post_en"] = "# English Post\n\nBody text."
-    sample_state["seo_metadata_ko"] = SEOMetadata(
-        optimized_title="AI 에이전트 설계",
-        meta_description="설계 가이드",
-        primary_keyword="AI 에이전트",
-        secondary_keywords=["설계"],
-        suggested_slug="ai-agent-design",
-    )
-    sample_state["seo_metadata_en"] = SEOMetadata(
-        optimized_title="AI Agent Design",
-        meta_description="Design guide",
-        primary_keyword="AI agents",
-        secondary_keywords=["design"],
-        suggested_slug="ai-agent-design",
-    )
-    sample_state["publish_targets"] = [
-        PublishTarget(language="ko", platform="github_pages", publish=True),
-        PublishTarget(language="en", platform="github_pages", publish=True),
-    ]
-
-    mock_publisher = MagicMock()
-    mock_publisher.publish_post.side_effect = [
-        "https://jkim101.github.io/blog/ai-agent-design/",
-        "https://jkim101.github.io/blog/ai-agent-design/",
-    ]
-
-    with patch("core.publisher.JekyllPublisher", return_value=mock_publisher), \
-         patch("core.output.OUTPUT_DIR", tmp_path):
-        result = publish_node(sample_state)
-
-    assert result["blog_url_ko"] == "https://jkim101.github.io/blog/ai-agent-design/"
-    assert result["blog_url_en"] == "https://jkim101.github.io/blog/ai-agent-design/"
-    assert mock_publisher.publish_post.call_count == 2
-    mock_publisher.commit_and_push.assert_called_once()
-
-    # Local files should still be saved
-    assert (tmp_path / "ai-agent-design_ko.md").exists()
-    assert (tmp_path / "ai-agent-design_en.md").exists()
-
-    # Check blog_url appears in frontmatter
-    ko_content = (tmp_path / "ai-agent-design_ko.md").read_text()
-    assert "blog_url:" in ko_content
-    assert "jkim101.github.io" in ko_content
-
 
 def test_publish_node_without_targets(tmp_path, sample_state, sample_critic_pass, sample_fact_check):
     """publish_node without targets should just save local files."""

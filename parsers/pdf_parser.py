@@ -25,15 +25,8 @@ def parse_pdf(file_path: str | Path) -> SourceContent:
     if not path.exists():
         raise FileNotFoundError(f"PDF not found: {path}")
 
-    doc = pymupdf.open(str(path))
-    pages: list[str] = []
-
-    for page in doc:
-        text = page.get_text()
-        if text.strip():
-            pages.append(text.strip())
-
-    doc.close()
+    with pymupdf.open(str(path)) as doc:
+        pages = [page.get_text().strip() for page in doc if page.get_text().strip()]
 
     if not pages:
         raise ValueError(f"No text content extracted from PDF: {path}")

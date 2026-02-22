@@ -12,6 +12,7 @@ See 설계서 §3 for agent specifications, §6 for tech stack.
 
 from __future__ import annotations
 
+import copy
 import json
 import logging
 import time
@@ -103,10 +104,16 @@ class BaseAgent:
         self,
         message: anthropic.types.Message,
         model_class: type[T],
+        *,
+        _system_prompt: str | None = None,
+        _user_message: str | None = None,
+        _tools: list[dict] | None = None,
+        _max_tokens: int = 4096,
     ) -> T:
         """Extract tool_use result and validate with Pydantic.
 
-        Retries LLM call once if validation fails.
+        Retries LLM call once if validation fails, sending the error back
+        to the LLM so it can correct its output.
         """
         tool_input = self._extract_tool_input(message)
         try:
@@ -116,6 +123,21 @@ class BaseAgent:
                 "[%s] Pydantic validation failed, retrying: %s",
                 self.agent_name, e,
             )
+            # If we have enough context to retry, ask the LLM to fix its output
+            if _system_prompt and _user_message and _tools:
+                correction_msg = (
+                    f"Your previous tool call had a validation error:\n{e}\n\n"
+                    f"Invalid input was:\n{json.dumps(tool_input, ensure_ascii=False, indent=2)}\n\n"
+                    "Please call the tool again with corrected values."
+                )
+                retry_message = self.call_llm(
+                    system_prompt=_system_prompt,
+                    user_message=correction_msg,
+                    tools=_tools,
+                    max_tokens=_max_tokens,
+                )
+                retry_input = self._extract_tool_input(retry_message)
+                return model_class.model_validate(retry_input)
             raise
 
     def get_text_response(self, message: anthropic.types.Message) -> str:
@@ -149,12 +171,29 @@ class BaseAgent:
 
     @staticmethod
     def build_tool_schema(name: str, description: str, model_class: type[BaseModel]) -> dict:
-        """Generate a Claude tool definition from a Pydantic model."""
+        """Generate a Claude tool definition from a Pydantic model.
+
+        Inlines all $ref references so Claude receives a flat, self-contained
+        schema without dangling $defs pointers.
+        """
         schema = model_class.model_json_schema()
-        # Remove $defs at top level — Claude expects flat input_schema
-        schema.pop("$defs", None)
+        defs = schema.pop("$defs", {})
+        inlined = BaseAgent._inline_refs(schema, defs)
         return {
             "name": name,
             "description": description,
-            "input_schema": schema,
+            "input_schema": inlined,
         }
+
+    @staticmethod
+    def _inline_refs(obj: Any, defs: dict) -> Any:
+        """Recursively resolve $ref pointers by inlining from $defs."""
+        if isinstance(obj, dict):
+            if "$ref" in obj:
+                ref_name = obj["$ref"].split("/")[-1]
+                if ref_name in defs:
+                    return BaseAgent._inline_refs(copy.deepcopy(defs[ref_name]), defs)
+            return {k: BaseAgent._inline_refs(v, defs) for k, v in obj.items()}
+        if isinstance(obj, list):
+            return [BaseAgent._inline_refs(item, defs) for item in obj]
+        return obj

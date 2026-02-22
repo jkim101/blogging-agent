@@ -24,7 +24,7 @@ from agents.seo_optimizer import SEOOptimizerAgent
 from agents.translator import TranslatorAgent
 from agents.writer import WriterAgent
 from config.settings import MAX_REWRITE_ATTEMPTS, SQLITE_DB_PATH
-from core.state import HumanDecision, PipelineState, Verdict
+from core.state import BlogConfig, HumanDecision, PipelineState, Verdict
 
 logger = logging.getLogger(__name__)
 
@@ -176,6 +176,11 @@ def route_after_critic(state: PipelineState) -> str:
             return "writer"
         else:
             logger.info("Max rewrites reached (%d), forcing pass", MAX_REWRITE_ATTEMPTS)
+
+    config = state.get("blog_config") or BlogConfig()
+    if config.output_language == "ko-only":
+        logger.info("output_language=ko-only → skipping translator")
+        return "editor"
 
     return "translator"
 

@@ -27,7 +27,7 @@ class TranslatorAgent(BaseAgent):
         message = self.call_llm(
             system_prompt=SYSTEM_PROMPT,
             user_message=f"## Korean Blog Post\n\n{draft_ko}",
-            max_tokens=8192,
+            max_tokens=4000,
         )
 
         draft_en = self.get_text_response(message)

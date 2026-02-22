@@ -246,3 +246,61 @@ pre {
 .pipeline-info p {
     margin: 0.25rem 0;
 }
+
+/* Retry button */
+.btn-retry {
+    background: transparent;
+    color: #cc7700;
+    border: 1px solid #cc7700;
+    padding: 2px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    margin: 0;
+}
+
+.btn-retry:hover {
+    background: #cc7700;
+    color: white;
+}
+
+/* Delete button */
+.btn-delete {
+    background: transparent;
+    color: #cc3333;
+    border: 1px solid #cc3333;
+    padding: 0.2rem 0.6rem;
+    font-size: 0.8rem;
+    margin: 0;
+}
+
+.btn-delete:hover {
+    background: #cc3333;
+    color: white;
+}
+
+/* Error box */
+.error-box {
+    color: #cc3333;
+    padding: 0.75rem 1rem;
+    background: #fff0f0;
+    border: 1px solid #ffcccc;
+    border-radius: 4px;
+    margin-bottom: 1rem;
+}
+
+/* Form group for blog config */
+.form-group {
+    margin-bottom: 0.75rem;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 500;
+    margin-bottom: 0.15rem;
+}
+
+.form-group input[type="checkbox"] {
+    width: auto;
+    margin-right: 0.5rem;
+}

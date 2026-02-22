@@ -22,7 +22,7 @@ Language: {language}
 
 Use the `submit_seo_metadata` tool to return your structured SEO metadata.
 Then output the final post with optimized headings as plain text.
-"""
+{config_section}"""
 
 TOOLS = [
     BaseAgent.build_tool_schema(

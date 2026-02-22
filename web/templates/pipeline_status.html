@@ -12,6 +12,12 @@
     {% endif %}
 </div>
 
+{% if error %}
+<div class="error-box">
+    <p><strong>Error:</strong> {{ error }}</p>
+</div>
+{% endif %}
+
 <!-- HTMX polling for live updates -->
 <div id="status-bar"
      hx-get="/api/pipeline/{{ pipeline_id }}/status"

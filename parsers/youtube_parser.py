@@ -47,8 +47,10 @@ def parse_youtube(url: str) -> SourceContent:
     """
     video_id = _extract_video_id(url)
 
+    api = YouTubeTranscriptApi()
+
     try:
-        transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
+        transcript_list = api.list(video_id)
     except Exception as e:
         raise ValueError(f"Failed to fetch transcripts for video {video_id}: {e}")
 
@@ -68,8 +70,8 @@ def parse_youtube(url: str) -> SourceContent:
         except StopIteration:
             raise ValueError(f"No transcripts available for video {video_id}")
 
-    entries = transcript.fetch()
-    text = " ".join(entry["text"] for entry in entries)
+    fetched = transcript.fetch()
+    text = " ".join(snippet.text for snippet in fetched.snippets)
 
     if not text.strip():
         raise ValueError(f"Empty transcript for video {video_id}")

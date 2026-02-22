@@ -15,10 +15,10 @@ def test_url_parser_returns_source_content(mock_traf):
     from parsers.url_parser import parse_url
 
     mock_traf.fetch_url.return_value = "<html>content</html>"
-    mock_traf.extract.side_effect = [
-        "Extracted article text about AI agents.",  # text extraction
-        '{"title": "Test Article", "author": "Author", "date": "2026-01-01"}',  # JSON metadata
-    ]
+    mock_traf.extract.return_value = (
+        '{"title": "Test Article", "author": "Author", "date": "2026-01-01",'
+        ' "text": "Extracted article text about AI agents."}'
+    )
 
     result = parse_url("https://example.com/article")
 
@@ -69,6 +69,8 @@ def test_pdf_parser_returns_source_content(mock_pymupdf, tmp_path):
 
     mock_doc = MagicMock()
     mock_doc.__iter__ = lambda self: iter([mock_page])
+    mock_doc.__enter__ = lambda self: mock_doc
+    mock_doc.__exit__ = MagicMock(return_value=False)
     mock_pymupdf.open.return_value = mock_doc
 
     result = parse_pdf(pdf_path)
@@ -89,20 +91,28 @@ def test_pdf_parser_handles_missing_file():
 # --- YouTube parser tests ---
 
 @patch("parsers.youtube_parser.YouTubeTranscriptApi")
-def test_youtube_parser_returns_source_content(mock_api):
+def test_youtube_parser_returns_source_content(mock_api_cls):
     """YouTube parser should return SourceContent with transcript text."""
     from parsers.youtube_parser import parse_youtube
 
+    mock_snippet_1 = MagicMock()
+    mock_snippet_1.text = "안녕하세요."
+    mock_snippet_2 = MagicMock()
+    mock_snippet_2.text = "오늘은 AI에 대해 이야기합니다."
+
+    mock_fetched = MagicMock()
+    mock_fetched.snippets = [mock_snippet_1, mock_snippet_2]
+
     mock_transcript = MagicMock()
     mock_transcript.language_code = "ko"
-    mock_transcript.fetch.return_value = [
-        {"text": "안녕하세요."},
-        {"text": "오늘은 AI에 대해 이야기합니다."},
-    ]
+    mock_transcript.fetch.return_value = mock_fetched
 
     mock_transcript_list = MagicMock()
     mock_transcript_list.find_transcript.return_value = mock_transcript
-    mock_api.list_transcripts.return_value = mock_transcript_list
+
+    mock_api = MagicMock()
+    mock_api.list.return_value = mock_transcript_list
+    mock_api_cls.return_value = mock_api
 
     result = parse_youtube("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
 
@@ -122,11 +132,13 @@ def test_youtube_parser_rejects_non_youtube_url():
 
 
 @patch("parsers.youtube_parser.YouTubeTranscriptApi")
-def test_youtube_parser_handles_no_transcripts(mock_api):
+def test_youtube_parser_handles_no_transcripts(mock_api_cls):
     """YouTube parser should raise ValueError when no transcripts available."""
     from parsers.youtube_parser import parse_youtube
 
-    mock_api.list_transcripts.side_effect = Exception("Subtitles are disabled")
+    mock_api = MagicMock()
+    mock_api.list.side_effect = Exception("Subtitles are disabled")
+    mock_api_cls.return_value = mock_api
 
     with pytest.raises(ValueError, match="Failed to fetch transcripts"):
         parse_youtube("https://www.youtube.com/watch?v=dQw4w9WgXcQ")

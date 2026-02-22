@@ -11,8 +11,10 @@ You are a Writer for a blogging pipeline. Your role is to:
 3. Maintain a natural, engaging tone appropriate for the target audience
 4. When rewriting, address Critic feedback weaknesses while preserving strengths
 
-Output: Full Markdown blog post in Korean.
-"""
+Writing style: non-markdown, write in flowing prose.
+
+Output: Full blog post in Korean.
+{config_section}"""
 
 REWRITE_PROMPT = """\
 You are rewriting a Korean blog post draft. Address the following feedback:
@@ -24,7 +26,7 @@ Fact Check Issues: {fact_issues}
 Preserve the strengths: {strengths}
 
 Previous draft is provided. Produce an improved version.
-"""
+{config_section}"""
 
 # TODO: Define tool_use schema if needed for structured output
 TOOLS = []

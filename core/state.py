@@ -20,6 +20,40 @@ class SourceType(str, Enum):
     YOUTUBE = "youtube"
 
 
+# --- Blog Configuration ---
+
+class BlogConfig(BaseModel):
+    """User-configurable blog post settings injected into agent prompts."""
+    word_count: int = 1500
+    tone: str = "professional"          # casual, professional, academic, conversational
+    target_audience: str = ""           # empty → Research Planner decides
+    writing_style: str = "analysis"     # tutorial, opinion, analysis, summary, listicle
+    include_code_examples: bool = False
+    include_tldr: bool = False
+    output_language: str = "both"       # ko-only, en-only, both
+    primary_keyword: str = ""           # empty → SEO Optimizer decides
+    categories: list[str] = Field(default_factory=list)
+    custom_instructions: str = ""
+
+    def format_as_prompt_section(self) -> str:
+        """Return BlogConfig as a formatted prompt section string."""
+        lines = ["", "## Blog Configuration"]
+        lines.append(f"- Word count: {self.word_count}")
+        lines.append(f"- Tone: {self.tone}")
+        lines.append(f"- Writing style: {self.writing_style}")
+        if self.target_audience:
+            lines.append(f"- Target audience: {self.target_audience}")
+        if self.include_code_examples:
+            lines.append("- Include relevant code examples where appropriate")
+        if self.include_tldr:
+            lines.append("- Include a TL;DR summary at the beginning of the post")
+        if self.output_language != "both":
+            lines.append(f"- Output language: {self.output_language}")
+        if self.custom_instructions:
+            lines.append(f"- Additional instructions: {self.custom_instructions}")
+        return "\n".join(lines)
+
+
 class HumanDecision(str, Enum):
     APPROVE = "approve"
     EDIT = "edit"
@@ -121,6 +155,9 @@ class PipelineState(TypedDict, total=False):
     Each agent reads and writes only its designated fields.
     See 설계서 §7.1 for field ownership.
     """
+    # Configuration
+    blog_config: BlogConfig
+
     # Source inputs
     sources: list[SourceContent]
 

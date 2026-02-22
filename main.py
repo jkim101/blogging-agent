@@ -20,18 +20,67 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+def _prompt_config():
+    """Interactive config prompts. Enter skips to default."""
+    from core.state import BlogConfig
+
+    print("\n--- Blog Configuration (press Enter for defaults) ---\n")
+
+    word_count = input(f"Word count [{BlogConfig().word_count}]: ").strip()
+    tone = input(f"Tone (casual/professional/academic/conversational) [{BlogConfig().tone}]: ").strip()
+    writing_style = input(f"Writing style (tutorial/opinion/analysis/summary/listicle) [{BlogConfig().writing_style}]: ").strip()
+    target_audience = input("Target audience (blank = auto): ").strip()
+    output_language = input(f"Output language (ko-only/en-only/both) [{BlogConfig().output_language}]: ").strip()
+    primary_keyword = input("Primary SEO keyword (blank = auto): ").strip()
+    categories = input("Categories (comma-separated, blank = none): ").strip()
+    include_code = input("Include code examples? (y/N): ").strip().lower()
+    include_tldr = input("Include TL;DR? (y/N): ").strip().lower()
+    custom = input("Custom instructions (blank = none): ").strip()
+
+    kwargs: dict = {}
+    if word_count:
+        try:
+            kwargs["word_count"] = int(word_count)
+        except ValueError:
+            print(f"Invalid word count '{word_count}', using default.")
+    if tone:
+        kwargs["tone"] = tone
+    if writing_style:
+        kwargs["writing_style"] = writing_style
+    if target_audience:
+        kwargs["target_audience"] = target_audience
+    if output_language:
+        kwargs["output_language"] = output_language
+    if primary_keyword:
+        kwargs["primary_keyword"] = primary_keyword
+    if categories:
+        kwargs["categories"] = [c.strip() for c in categories.split(",") if c.strip()]
+    if include_code == "y":
+        kwargs["include_code_examples"] = True
+    if include_tldr == "y":
+        kwargs["include_tldr"] = True
+    if custom:
+        kwargs["custom_instructions"] = custom
+
+    return BlogConfig(**kwargs)
+
+
 def run_pipeline(args: list[str]) -> None:
     """Parse sources from CLI args and run the pipeline interactively."""
     from core.runner import PipelineRunner
-    from core.state import HumanDecision, SourceContent
+    from core.state import BlogConfig, HumanDecision, SourceContent
     from parsers.url_parser import parse_url
     from parsers.pdf_parser import parse_pdf
     from parsers.youtube_parser import is_youtube_url, parse_youtube
 
+    quick = "--quick" in args
     sources: list[SourceContent] = []
     i = 0
     while i < len(args):
         arg = args[i]
+        if arg == "--quick":
+            i += 1
+            continue
         if arg == "--pdf":
             i += 1
             if i >= len(args):
@@ -52,10 +101,17 @@ def run_pipeline(args: list[str]) -> None:
         print("Error: no valid sources provided")
         sys.exit(1)
 
+    # Blog configuration
+    if quick:
+        blog_config = BlogConfig()
+        print("Using default blog configuration (--quick)")
+    else:
+        blog_config = _prompt_config()
+
     print(f"\nParsed {len(sources)} source(s). Starting pipeline...\n")
 
     runner = PipelineRunner()
-    thread_id = runner.start(sources)
+    thread_id = runner.start(sources, blog_config=blog_config)
 
     # Interactive HITL loop
     while True:
@@ -178,6 +234,76 @@ def _review_publish(state: dict) -> dict:
         print("Invalid choice. Enter P or R.")
 
 
+def publish_output(args: list[str]) -> None:
+    """Publish output Markdown files to GitHub Pages.
+
+    Reads frontmatter (title, slug, language, keywords) from each file,
+    writes Jekyll-formatted posts, then commits and pushes once.
+    """
+    import yaml
+    from core.publisher import JekyllPublisher, PublishError
+
+    if not args:
+        print("Error: provide at least one output file path")
+        print("Usage: python main.py publish <file.md> [file2.md] ...")
+        sys.exit(1)
+
+    publisher = JekyllPublisher()
+    first_title = ""
+
+    for filepath_str in args:
+        path = Path(filepath_str)
+        if not path.exists():
+            print(f"Error: file not found: {path}")
+            sys.exit(1)
+
+        content = path.read_text(encoding="utf-8")
+        if not content.startswith("---"):
+            print(f"Error: no frontmatter found in {path}")
+            sys.exit(1)
+
+        end = content.index("---", 3)
+        fm = yaml.safe_load(content[3:end])
+        body = content[end + 3:].strip()
+
+        title = fm.get("title", "")
+        slug = fm.get("slug", path.stem)
+        language = fm.get("language", "ko")
+        tags = []
+        if fm.get("primary_keyword"):
+            tags.append(fm["primary_keyword"])
+        secondary = fm.get("secondary_keywords", [])
+        if isinstance(secondary, list):
+            tags.extend(secondary)
+
+        if not first_title:
+            first_title = title
+
+        try:
+            url = publisher.publish_post(
+                title=title,
+                body_markdown=body,
+                slug=slug,
+                tags=tags,
+                language=language,
+            )
+            print(f"[{language.upper()}] {title}")
+            print(f"      → {url}")
+        except PublishError as e:
+            print(f"Error writing post: {e}")
+            sys.exit(1)
+
+    try:
+        publisher.commit_and_push(
+            paths=[publisher._repo_path / "_posts"],
+            title=f"Add post: {first_title}",
+        )
+        print("\nPushed to GitHub Pages!")
+    except PublishError as e:
+        print(f"Push failed: {e}")
+        sys.exit(1)
+
+
 def _print_results(state: dict) -> None:
     """Print final results summary and save output files."""
     from core.output import save_posts
@@ -209,6 +335,7 @@ def main() -> None:
         print("  python main.py run <url> [url2] ...                         # Run pipeline with URLs")
         print("  python main.py run --pdf <file.pdf>                         # Run pipeline with PDF")
         print("  python main.py run https://www.youtube.com/watch?v=VIDEO_ID # YouTube video")
+        print("  python main.py publish <file.md> [file2.md] ...             # Publish to GitHub Pages")
         sys.exit(1)
 
     command = sys.argv[1]
@@ -221,6 +348,12 @@ def main() -> None:
             print("Error: provide at least one source (URL or --pdf <path>)")
             sys.exit(1)
         run_pipeline(sys.argv[2:])
+    elif command == "publish":
+        if len(sys.argv) < 3:
+            print("Error: provide at least one output file path")
+            print("Usage: python main.py publish <file.md> [file2.md] ...")
+            sys.exit(1)
+        publish_output(sys.argv[2:])
     else:
         print(f"Unknown command: {command}")
         sys.exit(1)

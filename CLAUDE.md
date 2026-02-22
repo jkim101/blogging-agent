@@ -87,7 +87,6 @@ python main.py run https://example.com/article
 - [x] Tests (27 tests — agents, parsers, pipeline routing, output saving)
 - [x] CLI `run` command (main.py — interactive HITL, URL/PDF/RSS input)
 - [x] Output file saving (core/output.py — Markdown + YAML frontmatter)
-- [ ] Medium API publishing
 
 ## Reference
 
