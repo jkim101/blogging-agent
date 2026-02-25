@@ -209,6 +209,11 @@ async def retry_pipeline(request: Request, thread_id: str):
         return RedirectResponse("/login", status_code=302)
 
     runner = get_runner()
+    status = runner.get_status(thread_id)
+    if not status.get("is_stuck"):
+        logger.warning("retry skipped for %s: pipeline is not stuck (next=%s)", thread_id, status.get("next_node"))
+        return RedirectResponse(f"/pipeline/{thread_id}", status_code=302)
+
     try:
         await asyncio.to_thread(runner.retry, thread_id)
     except Exception as e:
@@ -294,6 +299,11 @@ async def outline_decision(
         return RedirectResponse("/login", status_code=302)
 
     runner = get_runner()
+    status = runner.get_status(thread_id)
+    if status.get("next_node") != "outline_review":
+        logger.warning("outline-decision skipped for %s: not at outline_review (next=%s)", thread_id, status.get("next_node"))
+        return RedirectResponse(f"/pipeline/{thread_id}", status_code=302)
+
     human_input = {
         "outline_decision": HumanDecision(decision),
         "outline_human_notes": notes,
@@ -315,6 +325,11 @@ async def publish_decision(
         return RedirectResponse("/login", status_code=302)
 
     runner = get_runner()
+    status = runner.get_status(thread_id)
+    if status.get("next_node") != "publish_review":
+        logger.warning("publish-decision skipped for %s: not at publish_review (next=%s)", thread_id, status.get("next_node"))
+        return RedirectResponse(f"/pipeline/{thread_id}", status_code=302)
+
     publish_targets = [
         PublishTarget(language="ko", platform="github_pages", publish=bool(publish_ko)),
         PublishTarget(language="en", platform="github_pages", publish=bool(publish_en)),
