@@ -66,7 +66,7 @@ class SEOOptimizerAgent(BaseAgent):
             system_prompt=system_prompt,
             user_message=user_message,
             tools=TOOLS,
-            max_tokens=1500,
+            max_tokens=4096,
         )
 
         seo_metadata = self.parse_tool_response(
