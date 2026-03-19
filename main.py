@@ -342,7 +342,8 @@ def main() -> None:
 
     if command == "serve":
         import uvicorn
-        uvicorn.run("web.app:app", host="0.0.0.0", port=8000, reload=True)
+        port = int(sys.argv[2]) if len(sys.argv) > 2 else 8001
+        uvicorn.run("web.app:app", host="0.0.0.0", port=port, reload=True)
     elif command == "run":
         if len(sys.argv) < 3:
             print("Error: provide at least one source (URL or --pdf <path>)")
