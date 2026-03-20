@@ -83,7 +83,8 @@ def test_publish_post_no_tags(publisher, jekyll_repo):
 
 def test_missing_repo_path_raises_error(tmp_path):
     """Publishing to a non-existent repo should raise PublishError."""
-    pub = JekyllPublisher(repo_path=str(tmp_path / "nonexistent"))
+    with patch("core.publisher.GITHUB_TOKEN", ""):
+        pub = JekyllPublisher(repo_path=str(tmp_path / "nonexistent"))
     with pytest.raises(PublishError, match="does not exist"):
         pub.publish_post(title="Test", body_markdown="Content", slug="test")
 
@@ -121,3 +122,66 @@ def test_commit_and_push_git_error(publisher, jekyll_repo):
                 paths=[jekyll_repo / "_posts" / "test.md"],
                 title="Test",
             )
+
+
+def test_api_publish_queues_and_pushes(tmp_path):
+    """When GITHUB_TOKEN is set and repo doesn't exist, use API mode."""
+    with patch("core.publisher.GITHUB_TOKEN", "fake-token"), \
+         patch("core.publisher.GITHUB_PAGES_REPO", "user/repo"):
+        pub = JekyllPublisher(repo_path=str(tmp_path / "nonexistent"))
+
+    assert pub._use_api is True
+
+    url = pub.publish_post(
+        title="API Post",
+        body_markdown="Content",
+        slug="api-post",
+        language="ko",
+    )
+    assert url == "https://jkim101.github.io/blog/api-post/"
+    assert len(pub._pending_files) == 1
+
+    # Mock the API call
+    mock_response_get = MagicMock()
+    mock_response_get.status_code = 404
+
+    mock_response_put = MagicMock()
+    mock_response_put.status_code = 201
+
+    with patch("core.publisher.httpx.Client") as mock_client_cls:
+        mock_client = MagicMock()
+        mock_client_cls.return_value.__enter__ = MagicMock(return_value=mock_client)
+        mock_client_cls.return_value.__exit__ = MagicMock(return_value=False)
+        mock_client.get.return_value = mock_response_get
+        mock_client.put.return_value = mock_response_put
+
+        pub.commit_and_push(paths=[], title="Add post")
+
+    mock_client.put.assert_called_once()
+    assert pub._pending_files == []
+
+
+def test_api_publish_error_raises(tmp_path):
+    """GitHub API error should raise PublishError."""
+    with patch("core.publisher.GITHUB_TOKEN", "fake-token"), \
+         patch("core.publisher.GITHUB_PAGES_REPO", "user/repo"):
+        pub = JekyllPublisher(repo_path=str(tmp_path / "nonexistent"))
+
+    pub.publish_post(title="Fail", body_markdown="Content", slug="fail")
+
+    mock_response_get = MagicMock()
+    mock_response_get.status_code = 404
+
+    mock_response_put = MagicMock()
+    mock_response_put.status_code = 422
+    mock_response_put.text = "Validation Failed"
+
+    with patch("core.publisher.httpx.Client") as mock_client_cls:
+        mock_client = MagicMock()
+        mock_client_cls.return_value.__enter__ = MagicMock(return_value=mock_client)
+        mock_client_cls.return_value.__exit__ = MagicMock(return_value=False)
+        mock_client.get.return_value = mock_response_get
+        mock_client.put.return_value = mock_response_put
+
+        with pytest.raises(PublishError, match="GitHub API error"):
+            pub.commit_and_push(paths=[], title="Add post")

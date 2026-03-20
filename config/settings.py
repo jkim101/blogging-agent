@@ -15,6 +15,8 @@ OUTPUT_DIR = PROJECT_ROOT / "output"
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 JEKYLL_REPO_PATH = os.getenv("JEKYLL_REPO_PATH", str(Path.home() / "antigravity" / "jkim101.github.io"))
 GITHUB_PAGES_URL = "https://jkim101.github.io"
+GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")
+GITHUB_PAGES_REPO = os.getenv("GITHUB_PAGES_REPO", "jkim101/jkim101.github.io")
 
 # Dashboard
 DASHBOARD_PASSWORD = os.getenv("DASHBOARD_PASSWORD", "change-me")
