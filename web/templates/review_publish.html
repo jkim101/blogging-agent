@@ -88,6 +88,21 @@
 </details>
 {% endif %}
 
+<!-- LinkedIn Posts -->
+{% if state.linkedin_post_ko or state.linkedin_post_en %}
+<details>
+    <summary>LinkedIn Posts</summary>
+    {% if state.linkedin_post_ko %}
+    <h4>Korean</h4>
+    <pre style="white-space: pre-wrap;">{{ state.linkedin_post_ko }}</pre>
+    {% endif %}
+    {% if state.linkedin_post_en %}
+    <h4>English</h4>
+    <pre style="white-space: pre-wrap;">{{ state.linkedin_post_en }}</pre>
+    {% endif %}
+</details>
+{% endif %}
+
 <!-- Post preview with tabs -->
 <div class="post-preview">
     <div class="tabs">
