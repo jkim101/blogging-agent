@@ -132,7 +132,6 @@ async def start_pipeline(
     tone: str = Form(default="professional"),
     writing_style: str = Form(default="analysis"),
     target_audience: str = Form(default=""),
-    output_language: str = Form(default="both"),
     primary_keyword: str = Form(default=""),
     categories: str = Form(default=""),
     include_code_examples: str = Form(default=""),
@@ -183,7 +182,6 @@ async def start_pipeline(
         tone=tone,
         writing_style=writing_style,
         target_audience=target_audience.strip(),
-        output_language=output_language,
         primary_keyword=primary_keyword.strip(),
         categories=[c.strip() for c in categories.split(",") if c.strip()],
         include_code_examples=bool(include_code_examples),
@@ -318,7 +316,6 @@ async def publish_decision(
     request: Request,
     thread_id: str,
     decision: str = Form(...),
-    publish_ko: str = Form(default=""),
     publish_en: str = Form(default=""),
 ):
     if not is_authenticated(request):
@@ -331,7 +328,6 @@ async def publish_decision(
         return RedirectResponse(f"/pipeline/{thread_id}", status_code=302)
 
     publish_targets = [
-        PublishTarget(language="ko", platform="github_pages", publish=bool(publish_ko)),
         PublishTarget(language="en", platform="github_pages", publish=bool(publish_en)),
     ]
     human_input = {

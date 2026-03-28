@@ -34,16 +34,6 @@ class EditorAgent(BaseAgent):
 
         results: dict[str, Any] = {"current_step": "editor"}
 
-        # Edit Korean draft (skip for en-only)
-        draft_ko = state.get("draft_ko", "")
-        if draft_ko and config.output_language != "en-only":
-            msg_ko = self.call_llm(
-                system_prompt=system_prompt,
-                user_message=f"## Draft to Edit (Korean)\n\n{draft_ko}",
-                max_tokens=4000,
-            )
-            results["edited_draft_ko"] = self.get_text_response(msg_ko)
-
         # Edit English draft
         draft_en = state.get("draft_en", "")
         if draft_en:

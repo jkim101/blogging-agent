@@ -20,7 +20,6 @@ from langgraph.graph import END, START, StateGraph
 from agents.critic import CriticAgent
 from agents.editor import EditorAgent
 from agents.fact_checker import FactCheckerAgent
-from agents.ko_summarizer import KoSummarizerAgent
 from agents.linkedin import LinkedInAgent
 from agents.research_planner import ResearchPlannerAgent
 from agents.seo_optimizer import SEOOptimizerAgent
@@ -35,7 +34,6 @@ _research_planner = ResearchPlannerAgent()
 _writer = WriterAgent()
 _fact_checker = FactCheckerAgent()
 _critic = CriticAgent()
-_ko_summarizer = KoSummarizerAgent()
 _editor = EditorAgent()
 _seo_optimizer = SEOOptimizerAgent()
 _linkedin = LinkedInAgent()
@@ -76,11 +74,6 @@ def fact_checker_node(state: PipelineState) -> dict:
 def critic_node(state: PipelineState) -> dict:
     logger.info("Running: critic")
     return _critic.run(state)
-
-
-def ko_summarizer_node(state: PipelineState) -> dict:
-    logger.info("Running: ko_summarizer")
-    return _ko_summarizer.run(state)
 
 
 def editor_node(state: PipelineState) -> dict:
@@ -209,7 +202,6 @@ def build_graph() -> SqliteSaver:
     graph.add_node("fact_checker", fact_checker_node)
     graph.add_node("critic", critic_node)
     graph.add_node("editor", editor_node)
-    graph.add_node("ko_summarizer", ko_summarizer_node)
     graph.add_node("seo_optimizer", seo_optimizer_node)
     graph.add_node("linkedin", linkedin_node)
     graph.add_node("publish_review", publish_review_node)
@@ -220,8 +212,7 @@ def build_graph() -> SqliteSaver:
     graph.add_edge("research_planner", "outline_review")
     graph.add_edge("writer", "fact_checker")
     graph.add_edge("fact_checker", "critic")
-    graph.add_edge("editor", "ko_summarizer")
-    graph.add_edge("ko_summarizer", "seo_optimizer")
+    graph.add_edge("editor", "seo_optimizer")
     graph.add_edge("seo_optimizer", "linkedin")
     graph.add_edge("linkedin", "publish_review")
     graph.add_edge("publish", END)

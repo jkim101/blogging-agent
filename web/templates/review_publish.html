@@ -92,29 +92,15 @@
 {% if state.linkedin_post_ko or state.linkedin_post_en %}
 <details>
     <summary>LinkedIn Posts</summary>
-    {% if state.linkedin_post_ko %}
-    <h4>Korean</h4>
-    <pre style="white-space: pre-wrap;">{{ state.linkedin_post_ko }}</pre>
-    {% endif %}
     {% if state.linkedin_post_en %}
-    <h4>English</h4>
     <pre style="white-space: pre-wrap;">{{ state.linkedin_post_en }}</pre>
     {% endif %}
 </details>
 {% endif %}
 
-<!-- Post preview with tabs -->
+<!-- Post preview -->
 <div class="post-preview">
-    <div class="tabs">
-        <button class="tab active" onclick="showTab('ko')">Korean</button>
-        <button class="tab" onclick="showTab('en')">English</button>
-    </div>
-    <div id="tab-ko" class="tab-content active">
-        <pre>{{ state.final_post_ko or state.edited_draft_ko or "No Korean post available" }}</pre>
-    </div>
-    <div id="tab-en" class="tab-content" style="display:none">
-        <pre>{{ state.final_post_en or state.edited_draft_en or "No English post available" }}</pre>
-    </div>
+    <pre>{{ state.final_post_en or state.edited_draft_en or "No English post available" }}</pre>
 </div>
 
 <!-- Publish form -->
@@ -122,12 +108,8 @@
     <div class="publish-options">
         <h3>Publish to GitHub Pages</h3>
         <label>
-            <input type="checkbox" name="publish_ko" value="1" checked>
-            Publish Korean to GitHub Pages
-        </label>
-        <label>
             <input type="checkbox" name="publish_en" value="1" checked>
-            Publish English to GitHub Pages
+            Publish to GitHub Pages
         </label>
     </div>
     <div class="actions">
@@ -136,12 +118,5 @@
     </div>
 </form>
 
-<script>
-function showTab(lang) {
-    document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
-    document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
-    document.getElementById('tab-' + lang).style.display = 'block';
-    event.target.classList.add('active');
-}
-</script>
+
 {% endblock %}

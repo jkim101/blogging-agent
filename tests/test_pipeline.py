@@ -88,15 +88,7 @@ def test_save_posts_creates_files(tmp_path, sample_state, sample_critic_pass, sa
 
     sample_state["critic_feedback"] = sample_critic_pass
     sample_state["fact_check"] = sample_fact_check
-    sample_state["final_post_ko"] = "# 한글 포스트\n\n본문입니다."
     sample_state["final_post_en"] = "# English Post\n\nBody text."
-    sample_state["seo_metadata_ko"] = SEOMetadata(
-        optimized_title="AI 에이전트 설계",
-        meta_description="설계 가이드",
-        primary_keyword="AI 에이전트",
-        secondary_keywords=["설계"],
-        suggested_slug="ai-agent-design",
-    )
     sample_state["seo_metadata_en"] = SEOMetadata(
         optimized_title="AI Agent Design",
         meta_description="Design guide",
@@ -108,16 +100,15 @@ def test_save_posts_creates_files(tmp_path, sample_state, sample_critic_pass, sa
     with patch("core.output.OUTPUT_DIR", tmp_path):
         saved = save_posts(sample_state, pipeline_id="test123")
 
-    assert len(saved) == 2
-    assert (tmp_path / "ai-agent-design_ko.md").exists()
+    assert len(saved) == 1
     assert (tmp_path / "ai-agent-design_en.md").exists()
 
-    ko_content = (tmp_path / "ai-agent-design_ko.md").read_text()
-    assert ko_content.startswith("---\n")
-    assert "language: ko" in ko_content
-    assert "critic_score: 8" in ko_content
-    assert "pipeline_id: test123" in ko_content
-    assert "# 한글 포스트" in ko_content
+    en_content = (tmp_path / "ai-agent-design_en.md").read_text()
+    assert en_content.startswith("---\n")
+    assert "language: en" in en_content
+    assert "critic_score: 8" in en_content
+    assert "pipeline_id: test123" in en_content
+    assert "# English Post" in en_content
 
 
 
@@ -129,8 +120,8 @@ def test_publish_node_without_targets(tmp_path, sample_state, sample_critic_pass
 
     sample_state["critic_feedback"] = sample_critic_pass
     sample_state["fact_check"] = sample_fact_check
-    sample_state["final_post_ko"] = "# 한글 포스트"
-    sample_state["seo_metadata_ko"] = SEOMetadata(
+    sample_state["final_post_en"] = "# English Post"
+    sample_state["seo_metadata_en"] = SEOMetadata(
         optimized_title="Test", suggested_slug="test-post",
     )
 
@@ -138,8 +129,8 @@ def test_publish_node_without_targets(tmp_path, sample_state, sample_critic_pass
         result = publish_node(sample_state)
 
     assert result["current_step"] == "publish"
-    assert "blog_url_ko" not in result
-    assert (tmp_path / "test-post_ko.md").exists()
+    assert "blog_url_en" not in result
+    assert (tmp_path / "test-post_en.md").exists()
 
 
 def test_graph_compiles():
@@ -152,7 +143,6 @@ def test_graph_compiles():
     assert "writer" in nodes
     assert "fact_checker" in nodes
     assert "critic" in nodes
-    assert "ko_summarizer" in nodes
     assert "editor" in nodes
     assert "seo_optimizer" in nodes
     assert "linkedin" in nodes

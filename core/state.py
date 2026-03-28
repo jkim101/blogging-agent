@@ -30,7 +30,6 @@ class BlogConfig(BaseModel):
     writing_style: str = "analysis"     # tutorial, opinion, analysis, summary, listicle
     include_code_examples: bool = False
     include_tldr: bool = False
-    output_language: str = "both"       # ko-only, en-only, both
     primary_keyword: str = ""           # empty → SEO Optimizer decides
     categories: list[str] = Field(default_factory=list)
     custom_instructions: str = ""
@@ -47,8 +46,6 @@ class BlogConfig(BaseModel):
             lines.append("- Include relevant code examples where appropriate")
         if self.include_tldr:
             lines.append("- Include a TL;DR summary at the beginning of the post")
-        if self.output_language != "both":
-            lines.append(f"- Output language: {self.output_language}")
         if self.custom_instructions:
             lines.append(f"- Additional instructions: {self.custom_instructions}")
         return "\n".join(lines)
@@ -132,8 +129,7 @@ class CriticFeedback(BaseModel):
 
 
 class LinkedInPosts(BaseModel):
-    """LinkedIn posts for Korean and English."""
-    ko: str = Field(description="Korean LinkedIn post")
+    """LinkedIn post in English."""
     en: str = Field(description="English LinkedIn post")
 
 
@@ -176,7 +172,6 @@ class PipelineState(TypedDict, total=False):
     outline_human_notes: str
 
     # Writer outputs
-    draft_ko: str
     draft_en: str
     rewrite_count: int
 
@@ -188,25 +183,20 @@ class PipelineState(TypedDict, total=False):
     critic_feedback: CriticFeedback
 
     # Editor outputs
-    edited_draft_ko: str
     edited_draft_en: str
 
     # SEO Optimizer outputs
-    seo_metadata_ko: SEOMetadata
     seo_metadata_en: SEOMetadata
-    final_post_ko: str
     final_post_en: str
 
     # HITL #2: Publish review
     publish_decision: HumanDecision
     publish_targets: list[PublishTarget]
 
-    # LinkedIn posts
-    linkedin_post_ko: str
+    # LinkedIn post
     linkedin_post_en: str
 
     # Publishing results
-    blog_url_ko: str
     blog_url_en: str
 
     # Pipeline metadata

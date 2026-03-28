@@ -52,7 +52,6 @@ class LinkedInAgent(BaseAgent):
         )
 
         return {
-            "linkedin_post_ko": posts.ko,
             "linkedin_post_en": posts.en,
             "current_step": "linkedin",
         }

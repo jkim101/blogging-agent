@@ -35,18 +35,6 @@ def save_posts(
     saved: list[Path] = []
     blog_urls = blog_urls or {}
 
-    # Save Korean post
-    if state.get("final_post_ko") or state.get("edited_draft_ko"):
-        path = _save_single(
-            state=state,
-            language="ko",
-            body=state.get("final_post_ko") or state.get("edited_draft_ko", ""),
-            seo=state.get("seo_metadata_ko"),
-            pipeline_id=pipeline_id,
-            blog_url=blog_urls.get("ko", ""),
-        )
-        saved.append(path)
-
     # Save English post
     if state.get("final_post_en") or state.get("edited_draft_en"):
         path = _save_single(
@@ -66,12 +54,6 @@ def save_posts(
         slug = seo_en.suggested_slug
     elif state.get("outline"):
         slug = _slugify(state["outline"].topic)
-
-    if state.get("linkedin_post_ko"):
-        path = OUTPUT_DIR / f"{slug}_linkedin_ko.txt"
-        path.write_text(state["linkedin_post_ko"], encoding="utf-8")
-        logger.info("Saved LinkedIn KO: %s", path)
-        saved.append(path)
 
     if state.get("linkedin_post_en"):
         path = OUTPUT_DIR / f"{slug}_linkedin_en.txt"

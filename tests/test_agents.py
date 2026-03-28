@@ -188,42 +188,19 @@ def test_critic_fail_verdict(mock_call, sample_state, sample_fact_check):
 
 
 @patch("agents.base_agent.BaseAgent.call_llm")
-def test_ko_summarizer_produces_korean_digest(mock_call, sample_state):
-    """KO Summarizer should produce draft_ko (Korean digest) from draft_en."""
-    from agents.ko_summarizer import KoSummarizerAgent
-
-    sample_state["draft_en"] = "# AI Agents\n\nThis is the full English post."
-
-    mock_call.return_value = make_mock_message([
-        make_text_block("# AI 에이전트\n\n핵심 내용 요약입니다."),
-    ])
-
-    agent = KoSummarizerAgent()
-    result = agent.run(sample_state)
-
-    assert "draft_ko" in result
-    assert "요약" in result["draft_ko"]
-
-
-@patch("agents.base_agent.BaseAgent.call_llm")
-def test_editor_edits_both_languages(mock_call, sample_state):
-    """Editor should edit both Korean and English drafts."""
+def test_editor_edits_english_draft(mock_call, sample_state):
+    """Editor should edit English draft."""
     from agents.editor import EditorAgent
 
-    sample_state["draft_ko"] = "한글 초고"
     sample_state["draft_en"] = "English draft"
 
-    mock_call.side_effect = [
-        make_mock_message([make_text_block("편집된 한글 초고")]),
-        make_mock_message([make_text_block("Edited English draft")]),
-    ]
+    mock_call.return_value = make_mock_message([make_text_block("Edited English draft")])
 
     agent = EditorAgent()
     result = agent.run(sample_state)
 
-    assert "edited_draft_ko" in result
     assert "edited_draft_en" in result
-    assert mock_call.call_count == 2
+    assert mock_call.call_count == 1
 
 
 @patch("agents.base_agent.BaseAgent.call_llm")
@@ -235,7 +212,6 @@ def test_linkedin_produces_posts(mock_call, sample_state):
 
     mock_call.return_value = make_mock_message([
         make_tool_use_block("submit_linkedin_posts", {
-            "ko": "AI 에이전트에 대한 링크드인 포스트입니다. #AI #에이전트",
             "en": "LinkedIn post about AI Agents. #AI #Agents",
         }),
     ])
@@ -243,10 +219,8 @@ def test_linkedin_produces_posts(mock_call, sample_state):
     agent = LinkedInAgent()
     result = agent.run(sample_state)
 
-    assert "linkedin_post_ko" in result
     assert "linkedin_post_en" in result
     assert "#AI" in result["linkedin_post_en"]
-    assert "#AI" in result["linkedin_post_ko"]
 
 
 @patch("agents.base_agent.BaseAgent.call_llm")
@@ -254,23 +228,23 @@ def test_seo_optimizer_produces_metadata(mock_call, sample_state):
     """SEO Optimizer should produce SEOMetadata and final posts."""
     from agents.seo_optimizer import SEOOptimizerAgent
 
-    sample_state["edited_draft_ko"] = "편집된 한글 초고"
+    sample_state["edited_draft_en"] = "Edited English draft about AI agents."
 
     mock_call.return_value = make_mock_message([
         make_tool_use_block("submit_seo_metadata", {
-            "optimized_title": "AI 에이전트 설계 패턴",
-            "meta_description": "AI 에이전트 설계에 대한 실용적 가이드",
-            "primary_keyword": "AI 에이전트",
-            "secondary_keywords": ["멀티에이전트", "설계 패턴"],
+            "optimized_title": "AI Agent Design Patterns",
+            "meta_description": "A practical guide to AI agent design",
+            "primary_keyword": "AI agents",
+            "secondary_keywords": ["multi-agent", "design patterns"],
             "suggested_slug": "ai-agent-design-patterns",
         }),
-        make_text_block("# AI 에이전트 설계 패턴\n\nSEO 최적화된 본문"),
+        make_text_block("# AI Agent Design Patterns\n\nSEO optimized body."),
     ])
 
     agent = SEOOptimizerAgent()
     result = agent.run(sample_state)
 
-    assert "seo_metadata_ko" in result
-    assert isinstance(result["seo_metadata_ko"], SEOMetadata)
-    assert result["seo_metadata_ko"].optimized_title == "AI 에이전트 설계 패턴"
-    assert "final_post_ko" in result
+    assert "seo_metadata_en" in result
+    assert isinstance(result["seo_metadata_en"], SEOMetadata)
+    assert result["seo_metadata_en"].optimized_title == "AI Agent Design Patterns"
+    assert "final_post_en" in result

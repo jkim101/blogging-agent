@@ -28,13 +28,6 @@ class SEOOptimizerAgent(BaseAgent):
         config = state.get("blog_config") or BlogConfig()
         results: dict[str, Any] = {"current_step": "seo_optimizer"}
 
-        # Optimize Korean
-        edited_ko = state.get("edited_draft_ko", "")
-        if edited_ko:
-            seo_ko, final_ko = self._optimize(edited_ko, outline, config, language="ko")
-            results["seo_metadata_ko"] = seo_ko
-            results["final_post_ko"] = final_ko
-
         # Optimize English
         edited_en = state.get("edited_draft_en", "")
         if edited_en:
