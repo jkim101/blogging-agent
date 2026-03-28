@@ -14,6 +14,8 @@ You are a Writer for a blogging pipeline. Your role is to:
 Writing style: Markdown format with proper headings, paragraphs, and structure.
 
 Output: Full blog post in English (Markdown).
+IMPORTANT: The outline may be written in Korean — use it as a structural guide only.
+Write the entire post in English regardless of the outline's language.
 {config_section}"""
 
 REWRITE_PROMPT = """\
@@ -26,6 +28,7 @@ Fact Check Issues: {fact_issues}
 Preserve the strengths: {strengths}
 
 Previous draft is provided. Produce an improved version.
+IMPORTANT: Write the entire post in English.
 {config_section}"""
 
 # TODO: Define tool_use schema if needed for structured output
