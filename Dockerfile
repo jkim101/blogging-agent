@@ -13,7 +13,8 @@ COPY . .
 # Install dependencies
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir tzdata && \
-    pip install --no-cache-dir .
+    pip install --no-cache-dir . && \
+    pip install --no-cache-dir "jinja2==3.1.4"
 
 # Create runtime directories
 RUN mkdir -p data output
