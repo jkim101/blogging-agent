@@ -22,7 +22,7 @@ class WriterAgent(BaseAgent):
     agent_name = "writer"
 
     def run(self, state: dict[str, Any]) -> dict[str, Any]:
-        """Write or rewrite Korean draft based on outline and feedback."""
+        """Write or rewrite English draft based on outline and feedback."""
         outline = state["outline"]
         research_summary = state.get("research_summary", "")
         rewrite_count = state.get("rewrite_count", 0)
@@ -48,7 +48,7 @@ class WriterAgent(BaseAgent):
                 config_section=config_section,
             )
             user_message = (
-                f"## Previous Draft\n\n{state['draft_ko']}\n\n"
+                f"## Previous Draft\n\n{state['draft_en']}\n\n"
                 f"## Outline\n\n{self._format_outline(outline)}"
             )
         else:
@@ -68,10 +68,10 @@ class WriterAgent(BaseAgent):
             max_tokens=max_tokens,
         )
 
-        draft_ko = self.get_text_response(message)
+        draft_en = self.get_text_response(message)
 
         return {
-            "draft_ko": draft_ko,
+            "draft_en": draft_en,
             "rewrite_count": rewrite_count + 1 if is_rewrite else 0,
             "current_step": "writer",
         }

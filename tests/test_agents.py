@@ -44,19 +44,19 @@ def test_research_planner_produces_outline(mock_call, sample_source):
 
 
 @patch("agents.base_agent.BaseAgent.call_llm")
-def test_writer_produces_korean_draft(mock_call, sample_state):
-    """Writer should produce draft_ko in Markdown."""
+def test_writer_produces_english_draft(mock_call, sample_state):
+    """Writer should produce draft_en in Markdown."""
     from agents.writer import WriterAgent
 
     mock_call.return_value = make_mock_message([
-        make_text_block("# AI 에이전트 설계 패턴\n\n본문 내용입니다."),
+        make_text_block("# AI Agent Design Patterns\n\nThis is the body."),
     ])
 
     agent = WriterAgent()
     result = agent.run(sample_state)
 
-    assert "draft_ko" in result
-    assert "에이전트" in result["draft_ko"]
+    assert "draft_en" in result
+    assert "AI Agent" in result["draft_en"]
     assert result["rewrite_count"] == 0
 
 
@@ -68,17 +68,17 @@ def test_writer_rewrite_increments_count(mock_call, sample_state, sample_critic_
     sample_state["rewrite_count"] = 1
     sample_state["critic_feedback"] = sample_critic_fail
     sample_state["fact_check"] = sample_fact_check
-    sample_state["draft_ko"] = "이전 초고 내용"
+    sample_state["draft_en"] = "Previous English draft"
 
     mock_call.return_value = make_mock_message([
-        make_text_block("# 개선된 AI 에이전트 설계 패턴\n\n개선된 본문."),
+        make_text_block("# Improved AI Agent Design Patterns\n\nImproved body."),
     ])
 
     agent = WriterAgent()
     result = agent.run(sample_state)
 
     assert result["rewrite_count"] == 2
-    assert "draft_ko" in result
+    assert "draft_en" in result
 
 
 @patch("agents.base_agent.BaseAgent.call_llm")
@@ -86,7 +86,7 @@ def test_fact_checker_produces_result(mock_call, sample_state):
     """Fact Checker should produce FactCheckResult."""
     from agents.fact_checker import FactCheckerAgent
 
-    sample_state["draft_ko"] = "AI 에이전트는 100% 정확합니다."
+    sample_state["draft_en"] = "AI agents are 100% accurate."
 
     mock_call.return_value = make_mock_message([
         make_tool_use_block("report_fact_check", {
@@ -116,7 +116,7 @@ def test_fact_checker_computes_diff(mock_call, sample_state, sample_fact_check_w
     """Fact Checker should compute diff on rewrite rounds."""
     from agents.fact_checker import FactCheckerAgent
 
-    sample_state["draft_ko"] = "수정된 초고"
+    sample_state["draft_en"] = "Revised English draft"
     sample_state["fact_check"] = sample_fact_check_with_issues
 
     mock_call.return_value = make_mock_message([
@@ -140,7 +140,7 @@ def test_critic_pass_verdict(mock_call, sample_state, sample_fact_check):
     """Critic should PASS when score >= 7 and no high-severity issues."""
     from agents.critic import CriticAgent
 
-    sample_state["draft_ko"] = "좋은 초고"
+    sample_state["draft_en"] = "A well-written English draft."
     sample_state["fact_check"] = sample_fact_check
 
     mock_call.return_value = make_mock_message([
@@ -166,7 +166,7 @@ def test_critic_fail_verdict(mock_call, sample_state, sample_fact_check):
     """Critic should FAIL when score < 7."""
     from agents.critic import CriticAgent
 
-    sample_state["draft_ko"] = "부족한 초고"
+    sample_state["draft_en"] = "A weak English draft."
     sample_state["fact_check"] = sample_fact_check
 
     mock_call.return_value = make_mock_message([
@@ -188,21 +188,21 @@ def test_critic_fail_verdict(mock_call, sample_state, sample_fact_check):
 
 
 @patch("agents.base_agent.BaseAgent.call_llm")
-def test_translator_produces_english_draft(mock_call, sample_state):
-    """Translator should produce draft_en from draft_ko."""
-    from agents.translator import TranslatorAgent
+def test_ko_summarizer_produces_korean_digest(mock_call, sample_state):
+    """KO Summarizer should produce draft_ko (Korean digest) from draft_en."""
+    from agents.ko_summarizer import KoSummarizerAgent
 
-    sample_state["draft_ko"] = "# AI 에이전트\n\n한글 본문입니다."
+    sample_state["draft_en"] = "# AI Agents\n\nThis is the full English post."
 
     mock_call.return_value = make_mock_message([
-        make_text_block("# AI Agents\n\nThis is the English body."),
+        make_text_block("# AI 에이전트\n\n핵심 내용 요약입니다."),
     ])
 
-    agent = TranslatorAgent()
+    agent = KoSummarizerAgent()
     result = agent.run(sample_state)
 
-    assert "draft_en" in result
-    assert "English" in result["draft_en"]
+    assert "draft_ko" in result
+    assert "요약" in result["draft_ko"]
 
 
 @patch("agents.base_agent.BaseAgent.call_llm")
@@ -224,6 +224,29 @@ def test_editor_edits_both_languages(mock_call, sample_state):
     assert "edited_draft_ko" in result
     assert "edited_draft_en" in result
     assert mock_call.call_count == 2
+
+
+@patch("agents.base_agent.BaseAgent.call_llm")
+def test_linkedin_produces_posts(mock_call, sample_state):
+    """LinkedIn agent should produce KO and EN LinkedIn posts."""
+    from agents.linkedin import LinkedInAgent
+
+    sample_state["draft_en"] = "# AI Agents\n\nFull English post."
+
+    mock_call.return_value = make_mock_message([
+        make_tool_use_block("submit_linkedin_posts", {
+            "ko": "AI 에이전트에 대한 링크드인 포스트입니다. #AI #에이전트",
+            "en": "LinkedIn post about AI Agents. #AI #Agents",
+        }),
+    ])
+
+    agent = LinkedInAgent()
+    result = agent.run(sample_state)
+
+    assert "linkedin_post_ko" in result
+    assert "linkedin_post_en" in result
+    assert "#AI" in result["linkedin_post_en"]
+    assert "#AI" in result["linkedin_post_ko"]
 
 
 @patch("agents.base_agent.BaseAgent.call_llm")

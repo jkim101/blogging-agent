@@ -22,8 +22,8 @@ class CriticAgent(BaseAgent):
     agent_name = "critic"
 
     def run(self, state: dict[str, Any]) -> dict[str, Any]:
-        """Evaluate draft_ko and return CriticFeedback with verdict."""
-        draft_ko = state["draft_ko"]
+        """Evaluate draft_en and return CriticFeedback with verdict."""
+        draft_en = state["draft_en"]
         outline = state["outline"]
         fact_check = state["fact_check"]
         rewrite_count = state.get("rewrite_count", 0)
@@ -46,7 +46,7 @@ class CriticAgent(BaseAgent):
             )
 
         user_message = (
-            f"## Korean Draft\n\n{draft_ko}\n\n"
+            f"## English Draft\n\n{draft_en}\n\n"
             f"## Outline\n\nTopic: {outline.topic}\nAngle: {outline.angle}\n\n"
             f"## Fact Check Results\n\n{fact_summary}"
         )

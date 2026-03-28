@@ -37,7 +37,8 @@ AGENT_MODELS = {
     "writer": SONNET_MODEL,
     "fact_checker": SONNET_MODEL,
     "critic": OPUS_MODEL,
-    "translator": SONNET_MODEL,
+    "ko_summarizer": SONNET_MODEL,
     "editor": SONNET_MODEL,
     "seo_optimizer": SONNET_MODEL,
+    "linkedin": SONNET_MODEL,
 }

@@ -131,6 +131,12 @@ class CriticFeedback(BaseModel):
     rewrite_instructions: str = ""
 
 
+class LinkedInPosts(BaseModel):
+    """LinkedIn posts for Korean and English."""
+    ko: str = Field(description="Korean LinkedIn post")
+    en: str = Field(description="English LinkedIn post")
+
+
 class SEOMetadata(BaseModel):
     """SEO optimization metadata."""
     optimized_title: str = ""
@@ -194,6 +200,10 @@ class PipelineState(TypedDict, total=False):
     # HITL #2: Publish review
     publish_decision: HumanDecision
     publish_targets: list[PublishTarget]
+
+    # LinkedIn posts
+    linkedin_post_ko: str
+    linkedin_post_en: str
 
     # Publishing results
     blog_url_ko: str

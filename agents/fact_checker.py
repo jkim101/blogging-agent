@@ -22,8 +22,8 @@ class FactCheckerAgent(BaseAgent):
     agent_name = "fact_checker"
 
     def run(self, state: dict[str, Any]) -> dict[str, Any]:
-        """Verify claims in draft_ko against sources."""
-        draft_ko = state["draft_ko"]
+        """Verify claims in draft_en against sources."""
+        draft_en = state["draft_en"]
         sources = state["sources"]
         previous_fact_check = state.get("fact_check")
 
@@ -35,7 +35,7 @@ class FactCheckerAgent(BaseAgent):
             )
 
         user_message = (
-            f"## Korean Draft to Verify\n\n{draft_ko}\n\n"
+            f"## English Draft to Verify\n\n{draft_en}\n\n"
             f"## Source Materials\n\n" + "\n\n".join(source_refs)
         )
 

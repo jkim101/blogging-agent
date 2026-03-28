@@ -1,9 +1,10 @@
 """LangGraph pipeline definition with HITL interrupts and SqliteSaver.
 
 Defines the full pipeline graph:
-  Research Planner → [HITL] → Writer(KO) → Fact Checker → Critic
+  Research Planner → [HITL] → Writer(EN) → Fact Checker → Critic
     ↕ (rewrite loop)
-  → Translator → Editor(KO+EN) → SEO Optimizer(KO+EN) → [HITL] → Publish
+  → Editor(EN) → KO Summarizer → Editor(KO) → SEO Optimizer(KO+EN)
+  → LinkedIn → [HITL] → Publish
 
 See 설계서 §2 for pipeline architecture, §5 for HITL design.
 """
@@ -19,9 +20,10 @@ from langgraph.graph import END, START, StateGraph
 from agents.critic import CriticAgent
 from agents.editor import EditorAgent
 from agents.fact_checker import FactCheckerAgent
+from agents.ko_summarizer import KoSummarizerAgent
+from agents.linkedin import LinkedInAgent
 from agents.research_planner import ResearchPlannerAgent
 from agents.seo_optimizer import SEOOptimizerAgent
-from agents.translator import TranslatorAgent
 from agents.writer import WriterAgent
 from config.settings import MAX_REWRITE_ATTEMPTS, SQLITE_DB_PATH
 from core.state import BlogConfig, HumanDecision, PipelineState, Verdict
@@ -33,9 +35,10 @@ _research_planner = ResearchPlannerAgent()
 _writer = WriterAgent()
 _fact_checker = FactCheckerAgent()
 _critic = CriticAgent()
-_translator = TranslatorAgent()
+_ko_summarizer = KoSummarizerAgent()
 _editor = EditorAgent()
 _seo_optimizer = SEOOptimizerAgent()
+_linkedin = LinkedInAgent()
 
 
 # --- Node functions ---
@@ -75,14 +78,19 @@ def critic_node(state: PipelineState) -> dict:
     return _critic.run(state)
 
 
-def translator_node(state: PipelineState) -> dict:
-    logger.info("Running: translator")
-    return _translator.run(state)
+def ko_summarizer_node(state: PipelineState) -> dict:
+    logger.info("Running: ko_summarizer")
+    return _ko_summarizer.run(state)
 
 
 def editor_node(state: PipelineState) -> dict:
     logger.info("Running: editor")
     return _editor.run(state)
+
+
+def linkedin_node(state: PipelineState) -> dict:
+    logger.info("Running: linkedin")
+    return _linkedin.run(state)
 
 
 def seo_optimizer_node(state: PipelineState) -> dict:
@@ -166,7 +174,7 @@ def route_after_outline_review(state: PipelineState) -> str:
 
 
 def route_after_critic(state: PipelineState) -> str:
-    """Route after Critic: pass → translator, fail → writer (up to max)."""
+    """Route after Critic: pass → editor, fail → writer (up to max)."""
     feedback = state.get("critic_feedback")
     rewrite_count = state.get("rewrite_count", 0)
 
@@ -177,12 +185,7 @@ def route_after_critic(state: PipelineState) -> str:
         else:
             logger.info("Max rewrites reached (%d), forcing pass", MAX_REWRITE_ATTEMPTS)
 
-    config = state.get("blog_config") or BlogConfig()
-    if config.output_language == "ko-only":
-        logger.info("output_language=ko-only → skipping translator")
-        return "editor"
-
-    return "translator"
+    return "editor"
 
 
 def route_after_publish_review(state: PipelineState) -> str:
@@ -205,9 +208,10 @@ def build_graph() -> SqliteSaver:
     graph.add_node("writer", writer_node)
     graph.add_node("fact_checker", fact_checker_node)
     graph.add_node("critic", critic_node)
-    graph.add_node("translator", translator_node)
     graph.add_node("editor", editor_node)
+    graph.add_node("ko_summarizer", ko_summarizer_node)
     graph.add_node("seo_optimizer", seo_optimizer_node)
+    graph.add_node("linkedin", linkedin_node)
     graph.add_node("publish_review", publish_review_node)
     graph.add_node("publish", publish_node)
 
@@ -216,9 +220,10 @@ def build_graph() -> SqliteSaver:
     graph.add_edge("research_planner", "outline_review")
     graph.add_edge("writer", "fact_checker")
     graph.add_edge("fact_checker", "critic")
-    graph.add_edge("translator", "editor")
-    graph.add_edge("editor", "seo_optimizer")
-    graph.add_edge("seo_optimizer", "publish_review")
+    graph.add_edge("editor", "ko_summarizer")
+    graph.add_edge("ko_summarizer", "seo_optimizer")
+    graph.add_edge("seo_optimizer", "linkedin")
+    graph.add_edge("linkedin", "publish_review")
     graph.add_edge("publish", END)
 
     # Conditional edges

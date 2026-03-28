@@ -59,6 +59,26 @@ def save_posts(
         )
         saved.append(path)
 
+    # Save LinkedIn posts
+    slug = "untitled"
+    seo_en = state.get("seo_metadata_en")
+    if seo_en and seo_en.suggested_slug:
+        slug = seo_en.suggested_slug
+    elif state.get("outline"):
+        slug = _slugify(state["outline"].topic)
+
+    if state.get("linkedin_post_ko"):
+        path = OUTPUT_DIR / f"{slug}_linkedin_ko.txt"
+        path.write_text(state["linkedin_post_ko"], encoding="utf-8")
+        logger.info("Saved LinkedIn KO: %s", path)
+        saved.append(path)
+
+    if state.get("linkedin_post_en"):
+        path = OUTPUT_DIR / f"{slug}_linkedin_en.txt"
+        path.write_text(state["linkedin_post_en"], encoding="utf-8")
+        logger.info("Saved LinkedIn EN: %s", path)
+        saved.append(path)
+
     return saved
 
 

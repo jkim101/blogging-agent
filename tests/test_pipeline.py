@@ -13,13 +13,13 @@ from core.graph import (
 from langgraph.graph import END
 
 
-def test_critic_pass_routes_to_translator(sample_state, sample_critic_pass):
-    """Critic PASS verdict should route to Translator."""
+def test_critic_pass_routes_to_editor(sample_state, sample_critic_pass):
+    """Critic PASS verdict should route to Editor."""
     sample_state["critic_feedback"] = sample_critic_pass
     sample_state["rewrite_count"] = 1
 
     result = route_after_critic(sample_state)
-    assert result == "translator"
+    assert result == "editor"
 
 
 def test_critic_fail_routes_to_writer(sample_state, sample_critic_fail):
@@ -37,7 +37,7 @@ def test_max_rewrite_forces_pass(sample_state, sample_critic_fail):
     sample_state["rewrite_count"] = 3  # MAX_REWRITE_ATTEMPTS default
 
     result = route_after_critic(sample_state)
-    assert result == "translator"
+    assert result == "editor"
 
 
 def test_outline_approve_routes_to_writer(sample_state):
@@ -152,9 +152,10 @@ def test_graph_compiles():
     assert "writer" in nodes
     assert "fact_checker" in nodes
     assert "critic" in nodes
-    assert "translator" in nodes
+    assert "ko_summarizer" in nodes
     assert "editor" in nodes
     assert "seo_optimizer" in nodes
+    assert "linkedin" in nodes
     assert "outline_review" in nodes
     assert "publish_review" in nodes
     assert "publish" in nodes
