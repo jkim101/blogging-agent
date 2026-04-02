@@ -18,6 +18,7 @@ class SourceType(str, Enum):
     URL = "url"
     PDF = "pdf"
     YOUTUBE = "youtube"
+    TEXT = "text"  # Pre-parsed text content (e.g. Knowledge Docs from personal-intelligence)
 
 
 # --- Blog Configuration ---

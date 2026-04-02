@@ -23,7 +23,8 @@ from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 
 from config.settings import DASHBOARD_PASSWORD, STYLE_GUIDE_PATH
-from core.runner import PipelineRunner
+from web.runner_instance import get_runner
+from web.api_v1 import router as api_v1_router
 from core.state import BlogConfig, HumanDecision, PublishTarget, SourceContent, ToolConfig
 from parsers.url_parser import parse_url
 from parsers.pdf_parser import parse_pdf
@@ -48,6 +49,7 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Blogging Agent Dashboard")
 app.add_middleware(SessionMiddleware, secret_key=os.getenv("SESSION_SECRET", "blogging-agent-secret-key"))
+app.include_router(api_v1_router)
 
 TEMPLATES_DIR = Path(__file__).parent / "templates"
 STATIC_DIR = Path(__file__).parent / "static"
@@ -55,16 +57,6 @@ UPLOAD_DIR = Path(__file__).parent.parent / "data" / "uploads"
 
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
-
-# Singleton runner
-_runner: PipelineRunner | None = None
-
-
-def get_runner() -> PipelineRunner:
-    global _runner
-    if _runner is None:
-        _runner = PipelineRunner()
-    return _runner
 
 
 # --- Auth helpers ---

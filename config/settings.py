@@ -21,6 +21,9 @@ GITHUB_PAGES_REPO = os.getenv("GITHUB_PAGES_REPO", "jkim101/jkim101.github.io")
 # Dashboard
 DASHBOARD_PASSWORD = os.getenv("DASHBOARD_PASSWORD", "change-me")
 
+# API Key for programmatic access (personal-intelligence integration)
+BLOGGING_AGENT_API_KEY = os.getenv("BLOGGING_AGENT_API_KEY", "")
+
 # Pipeline
 MAX_REWRITE_ATTEMPTS = int(os.getenv("MAX_REWRITE_ATTEMPTS", "3"))
 
