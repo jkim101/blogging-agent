@@ -1,8 +1,9 @@
-"""FastAPI web application for the blogging agent dashboard.
+"""FastAPI web application — AI Writing Hub.
 
-Provides HITL review interface, pipeline management, and status monitoring.
-Uses Jinja2 templates + HTMX for real-time updates.
-See 설계서 §5 for HITL design, §10 for authentication.
+Provides:
+  - Blog Generator (full LangGraph pipeline with HITL)
+  - Quick Summary (single-shot summarizer)
+  - LinkedIn Article (single-shot long-form article writer)
 """
 
 from __future__ import annotations
@@ -11,6 +12,8 @@ import asyncio
 import logging
 import os
 import shutil
+import threading
+import uuid
 from pathlib import Path
 
 from fastapi import FastAPI, Form, Request, UploadFile, File
@@ -21,10 +24,25 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from config.settings import DASHBOARD_PASSWORD, STYLE_GUIDE_PATH
 from core.runner import PipelineRunner
-from core.state import BlogConfig, HumanDecision, PublishTarget, SourceContent
+from core.state import BlogConfig, HumanDecision, PublishTarget, SourceContent, ToolConfig
 from parsers.url_parser import parse_url
 from parsers.pdf_parser import parse_pdf
 from parsers.youtube_parser import parse_youtube
+
+# Simple in-memory job store for non-pipeline tools
+_jobs: dict[str, dict] = {}
+
+
+def _run_job(job_id: str, fn, *args):
+    _jobs[job_id] = {"status": "running", "result": None, "error": None}
+    def _worker():
+        try:
+            result = fn(*args)
+            _jobs[job_id].update({"status": "completed", "result": result})
+        except Exception as exc:
+            logger.error("Job %s failed: %s", job_id, exc)
+            _jobs[job_id].update({"status": "error", "error": str(exc)})
+    threading.Thread(target=_worker, daemon=True).start()
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +77,13 @@ def is_authenticated(request: Request) -> bool:
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
+    if not is_authenticated(request):
+        return RedirectResponse("/login", status_code=302)
+    return templates.TemplateResponse("home.html", {"request": request})
+
+
+@app.get("/blog", response_class=HTMLResponse)
+async def blog_home(request: Request):
     if not is_authenticated(request):
         return RedirectResponse("/login", status_code=302)
     return RedirectResponse("/dashboard", status_code=302)
@@ -369,3 +394,202 @@ async def style_guide(request: Request):
         "style_guide.html",
         {"request": request, "style_guide_content": content},
     )
+
+
+# ---------------------------------------------------------------------------
+# Shared helpers for simple tools
+# ---------------------------------------------------------------------------
+
+async def _parse_sources(
+    urls: list[str],
+    youtube_urls: list[str],
+    pdfs: list[UploadFile],
+) -> list[SourceContent]:
+    sources: list[SourceContent] = []
+    for url in urls:
+        if url.strip():
+            try:
+                sources.append(await asyncio.to_thread(parse_url, url.strip()))
+            except Exception as exc:
+                logger.warning("Failed to parse URL %s: %s", url, exc)
+    for yt_url in youtube_urls:
+        if yt_url.strip():
+            try:
+                sources.append(await asyncio.to_thread(parse_youtube, yt_url.strip()))
+            except Exception as exc:
+                logger.warning("Failed to parse YouTube %s: %s", yt_url, exc)
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    for pdf_file in pdfs:
+        if pdf_file.filename and pdf_file.size and pdf_file.size > 0:
+            save_path = UPLOAD_DIR / Path(pdf_file.filename).name
+            with open(save_path, "wb") as f:
+                shutil.copyfileobj(pdf_file.file, f)
+            try:
+                sources.append(await asyncio.to_thread(parse_pdf, save_path))
+            except Exception as exc:
+                logger.warning("Failed to parse PDF %s: %s", pdf_file.filename, exc)
+    return sources
+
+
+# ---------------------------------------------------------------------------
+# Summary tool
+# ---------------------------------------------------------------------------
+
+@app.get("/summary", response_class=HTMLResponse)
+async def summary_page(request: Request):
+    if not is_authenticated(request):
+        return RedirectResponse("/login", status_code=302)
+    return templates.TemplateResponse("summary_new.html", {"request": request})
+
+
+@app.post("/summary/run")
+async def summary_run(
+    request: Request,
+    urls: list[str] = Form(default=[]),
+    youtube_urls: list[str] = Form(default=[]),
+    pdfs: list[UploadFile] = File(default=[]),
+    word_count: int = Form(default=400),
+    tone: str = Form(default="professional"),
+    target_audience: str = Form(default=""),
+    include_tldr: str = Form(default=""),
+    custom_instructions: str = Form(default=""),
+):
+    if not is_authenticated(request):
+        return RedirectResponse("/login", status_code=302)
+
+    sources = await _parse_sources(urls, youtube_urls, pdfs)
+    if not sources:
+        return templates.TemplateResponse(
+            "summary_new.html",
+            {"request": request, "error": "No valid sources provided."},
+        )
+
+    config = ToolConfig(
+        word_count=word_count,
+        tone=tone,
+        target_audience=target_audience.strip(),
+        include_tldr=bool(include_tldr),
+        custom_instructions=custom_instructions.strip(),
+    )
+
+    from agents.summarizer import SummarizerAgent
+    agent = SummarizerAgent()
+    job_id = str(uuid.uuid4())[:8]
+    _run_job(job_id, agent.run, sources, config)
+
+    return RedirectResponse(f"/summary/{job_id}", status_code=302)
+
+
+@app.get("/summary/{job_id}", response_class=HTMLResponse)
+async def summary_result(request: Request, job_id: str):
+    if not is_authenticated(request):
+        return RedirectResponse("/login", status_code=302)
+
+    job = _jobs.get(job_id, {"status": "error", "error": "Job not found."})
+    result_text = job.get("result", {}).get("summary", "") if job.get("result") else ""
+    return templates.TemplateResponse("tool_result.html", {
+        "request": request,
+        "job_id": job_id,
+        "tool": "summary",
+        "tool_label": "Quick Summary",
+        "back_url": "/summary",
+        "status": job["status"],
+        "result": result_text,
+        "error": job.get("error"),
+    })
+
+
+# ---------------------------------------------------------------------------
+# LinkedIn Article tool
+# ---------------------------------------------------------------------------
+
+@app.get("/linkedin-article", response_class=HTMLResponse)
+async def linkedin_article_page(request: Request):
+    if not is_authenticated(request):
+        return RedirectResponse("/login", status_code=302)
+    return templates.TemplateResponse("linkedin_article_new.html", {"request": request})
+
+
+@app.post("/linkedin-article/run")
+async def linkedin_article_run(
+    request: Request,
+    urls: list[str] = Form(default=[]),
+    youtube_urls: list[str] = Form(default=[]),
+    pdfs: list[UploadFile] = File(default=[]),
+    word_count: int = Form(default=800),
+    tone: str = Form(default="professional"),
+    target_audience: str = Form(default=""),
+    include_tldr: str = Form(default=""),
+    custom_instructions: str = Form(default=""),
+):
+    if not is_authenticated(request):
+        return RedirectResponse("/login", status_code=302)
+
+    sources = await _parse_sources(urls, youtube_urls, pdfs)
+    if not sources:
+        return templates.TemplateResponse(
+            "linkedin_article_new.html",
+            {"request": request, "error": "No valid sources provided."},
+        )
+
+    config = ToolConfig(
+        word_count=word_count,
+        tone=tone,
+        target_audience=target_audience.strip(),
+        include_tldr=bool(include_tldr),
+        custom_instructions=custom_instructions.strip(),
+    )
+
+    from agents.linkedin_article import LinkedInArticleAgent
+    agent = LinkedInArticleAgent()
+    job_id = str(uuid.uuid4())[:8]
+    _run_job(job_id, agent.run, sources, config)
+
+    return RedirectResponse(f"/linkedin-article/{job_id}", status_code=302)
+
+
+@app.get("/linkedin-article/{job_id}", response_class=HTMLResponse)
+async def linkedin_article_result(request: Request, job_id: str):
+    if not is_authenticated(request):
+        return RedirectResponse("/login", status_code=302)
+
+    job = _jobs.get(job_id, {"status": "error", "error": "Job not found."})
+    result_text = job.get("result", {}).get("article", "") if job.get("result") else ""
+    return templates.TemplateResponse("tool_result.html", {
+        "request": request,
+        "job_id": job_id,
+        "tool": "linkedin-article",
+        "tool_label": "LinkedIn Article",
+        "back_url": "/linkedin-article",
+        "status": job["status"],
+        "result": result_text,
+        "error": job.get("error"),
+    })
+
+
+# ---------------------------------------------------------------------------
+# Generic job polling endpoint (HTMX)
+# ---------------------------------------------------------------------------
+
+@app.get("/api/job/{job_id}/poll", response_class=HTMLResponse)
+async def job_poll(request: Request, job_id: str, tool: str = ""):
+    if not is_authenticated(request):
+        return HTMLResponse("")
+
+    job = _jobs.get(job_id, {"status": "error", "error": "Job not found."})
+    tool_label = {"summary": "Quick Summary", "linkedin-article": "LinkedIn Article"}.get(tool, tool)
+    back_url = f"/{tool}" if tool else "/"
+
+    result_key = "summary" if tool == "summary" else "article"
+    result_text = job.get("result", {}).get(result_key, "") if job.get("result") else ""
+
+    return templates.TemplateResponse("fragments/job_poll.html", {
+        "request": request,
+        "job_id": job_id,
+        "tool": tool,
+        "tool_label": tool_label,
+        "back_url": back_url,
+        "status": job["status"],
+        "result": result_text,
+        "error": job.get("error"),
+    })

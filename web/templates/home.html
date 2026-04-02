@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Home — AI Writing Hub{% endblock %}
+{% block content %}
+<h1>AI Writing Hub</h1>
+<p style="color:#666; margin-bottom:2rem;">Choose a tool to get started.</p>
+
+<div class="tool-grid">
+
+    <a href="/blog" class="tool-card">
+        <h2>Blog Generator</h2>
+        <p>Full multi-agent pipeline. Researches sources, writes a polished English blog post, generates LinkedIn post, and publishes to GitHub Pages.</p>
+        <div class="tool-meta">URL · YouTube · PDF &nbsp;·&nbsp; ~5-10 min &nbsp;·&nbsp; HITL review</div>
+    </a>
+
+    <a href="/summary" class="tool-card">
+        <h2>Quick Summary</h2>
+        <p>Paste a URL, upload a PDF, or add a YouTube video. Get a structured summary with key findings and takeaways in under a minute.</p>
+        <div class="tool-meta">URL · YouTube · PDF &nbsp;·&nbsp; ~1-2 min</div>
+    </a>
+
+    <a href="/linkedin-article" class="tool-card">
+        <h2>LinkedIn Article</h2>
+        <p>Write a long-form LinkedIn article (600-1200 words) from your sources. Structured, professional, and ready to publish.</p>
+        <div class="tool-meta">URL · YouTube · PDF &nbsp;·&nbsp; ~1-2 min</div>
+    </a>
+
+</div>
+{% endblock %}

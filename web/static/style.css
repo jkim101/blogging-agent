@@ -289,6 +289,47 @@ pre {
     margin-bottom: 1rem;
 }
 
+/* Tool hub cards */
+.tool-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+}
+
+.tool-card {
+    display: block;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 1.5rem;
+    text-decoration: none;
+    color: inherit;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.tool-card:hover {
+    border-color: #0066cc;
+    box-shadow: 0 2px 8px rgba(0, 102, 204, 0.12);
+}
+
+.tool-card h2 {
+    margin: 0 0 0.5rem;
+    color: #0066cc;
+    font-size: 1.1rem;
+}
+
+.tool-card p {
+    color: #555;
+    margin: 0 0 1rem;
+    font-size: 0.92rem;
+    line-height: 1.5;
+}
+
+.tool-card .tool-meta {
+    font-size: 0.78rem;
+    color: #999;
+}
+
 /* Form group for blog config */
 .form-group {
     margin-bottom: 0.75rem;

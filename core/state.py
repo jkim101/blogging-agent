@@ -51,6 +51,27 @@ class BlogConfig(BaseModel):
         return "\n".join(lines)
 
 
+class ToolConfig(BaseModel):
+    """Config for simple (non-pipeline) tools: summarizer and LinkedIn article."""
+    word_count: int = 500
+    tone: str = "professional"
+    target_audience: str = ""
+    include_tldr: bool = False
+    custom_instructions: str = ""
+
+    def format_as_prompt_section(self) -> str:
+        lines = ["", "## Configuration"]
+        lines.append(f"- Target length: ~{self.word_count} words")
+        lines.append(f"- Tone: {self.tone}")
+        if self.target_audience:
+            lines.append(f"- Target audience: {self.target_audience}")
+        if self.include_tldr:
+            lines.append("- Include a TL;DR at the beginning")
+        if self.custom_instructions:
+            lines.append(f"- Additional instructions: {self.custom_instructions}")
+        return "\n".join(lines)
+
+
 class HumanDecision(str, Enum):
     APPROVE = "approve"
     EDIT = "edit"

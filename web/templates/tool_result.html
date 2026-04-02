@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}{{ tool_label }} — Result{% endblock %}
+{% block content %}
+<h1>{{ tool_label }}</h1>
+
+<div id="job-result"
+     {% if status == "running" %}
+     hx-get="/api/job/{{ job_id }}/poll?tool={{ tool }}"
+     hx-trigger="load delay:3s, every 4s"
+     hx-swap="outerHTML"
+     {% endif %}>
+
+    {% if status == "running" %}
+    <div class="pipeline-info">
+        <p>Processing your sources... This usually takes 30-60 seconds.</p>
+    </div>
+    <div class="progress-bar">
+        <span class="step step-active">Running</span>
+    </div>
+
+    {% elif status == "completed" %}
+    <div class="actions" style="margin-bottom:1rem;">
+        <a href="{{ back_url }}"><button type="button">New {{ tool_label }}</button></a>
+        <button onclick="copyResult()">Copy</button>
+    </div>
+    <pre id="result-text">{{ result }}</pre>
+    <script>
+    function copyResult() {
+        navigator.clipboard.writeText(document.getElementById('result-text').innerText);
+    }
+    </script>
+
+    {% else %}
+    <p class="error">{{ error or "An error occurred. Please try again." }}</p>
+    <a href="{{ back_url }}"><button type="button">Try Again</button></a>
+    {% endif %}
+
+</div>
+{% endblock %}
