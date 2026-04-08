@@ -22,4 +22,5 @@ RUN mkdir -p data output
 ENV PORT=8001
 EXPOSE ${PORT}
 
+ENV PYTHONPATH=/app
 CMD uvicorn web.app:app --host 0.0.0.0 --port ${PORT}
